@@ -254,8 +254,13 @@
             <div id="entry-msg" class="msg">
               ${(() => {
                 const s = getState().lastSuggestion;
-                if (s && s.at && (Date.now() - s.at < 60000)) {
-                  return '<div style="background:rgba(129,140,248,0.1); border:1px solid rgba(129,140,248,0.2); border-radius:8px; padding:10px 14px; margin-top:8px;"><span style="font-size:12px; color:var(--accent);">💡 试试：</span> <span style="font-size:13px; color:var(--fg2);">' + escHtml(s.text) + '</span></div>';
+                if (s && s.at && (Date.now() - s.at < 120000)) {
+                  return `<div style="background:rgba(129,140,248,0.08); border:1px solid rgba(129,140,248,0.15); border-radius:10px; padding:14px; margin-top:10px;">
+                    <div style="font-size:12px; color:var(--accent); font-weight:500; margin-bottom:6px;">📋 分析</div>
+                    <div style="font-size:13px; color:var(--fg2); margin-bottom:10px;">${escHtml(s.why)}</div>
+                    <div style="font-size:12px; color:var(--accent); font-weight:500; margin-bottom:6px;">💡 具体方案</div>
+                    <div style="font-size:13px; color:var(--fg); line-height:1.6;">${escHtml(s.how)}</div>
+                  </div>`;
                 }
                 return '';
               })()}
@@ -317,7 +322,7 @@
           });
           // Store instant suggestion in state so it survives renderMain()
           const suggestion = getInstantSuggestion(selectedTag, text);
-          state.set('lastSuggestion', { text: suggestion, tag: selectedTag, at: Date.now() });
+          state.set('lastSuggestion', { ...getInstantSuggestion(selectedTag, text), at: Date.now() });
           document.getElementById('entry-text').value = '';
           renderMain();
         };
@@ -332,29 +337,60 @@
       // ─── Instant suggestion per entry ──────────────
       function getInstantSuggestion(tag, content) {
         const c = content.toLowerCase();
-        // Keyword-based suggestions
-        const keywordMap = [
-          { keys: ['通知','提醒','弹窗','推送'], msg: '花 2 分钟关掉不重要的通知，世界会安静很多。' },
-          { keys: ['找','翻','搜索','找不到'], msg: '给文件/笔记建一个简单的分类规则，5 秒标记省 5 分钟查找。' },
-          { keys: ['纠结','选择','决定','不知道'], msg: '给这类决策设一个默认选项，减少"选哪个"的内耗。' },
-          { keys: ['忘','忘记','忘了'], msg: '设一个定时提醒或固定流程，别让记忆力背锅。' },
-          { keys: ['重复','每次都','又'], msg: '这种重复操作值得花 10 分钟找一个一劳永逸的解法。' },
-          { keys: ['贵','花钱','买','消费','订阅'], msg: '记一笔"冲动消费"，一个月后回看还觉得值得吗？' },
-          { keys: ['卡','慢','崩溃','bug'], msg: '同类工具对比一下，可能有更好的选择。' },
-          { keys: ['绕','多一步','多此一举'], msg: '这个多余的步骤能自动化或跳过吗？' },
+
+        // Analyze the specific friction and give concrete advice
+        const rules = [
+          // Time-related specific
+          { keys: ['通知','提醒','弹窗','推送','消息'],
+            why: '你的注意力被无关通知打断了',
+            how: '关掉非紧急 App 的通知（微信/钉钉除外），一天能省 15-30 分钟。路径：设置 → 通知 → 逐个 App 关。' },
+          { keys: ['找','翻','搜索','找不到','文件','笔记'],
+            why: '信息没有统一存放，每次都在"找"上浪费时间',
+            how: '建一个简单的文件夹规则（比如按日期或项目名），每周花 5 分钟整理，以后找东西不超过 10 秒。' },
+          { keys: ['纠结','选择','决定','不知道','选哪个'],
+            why: '决策成本太高，小事消耗了大精力',
+            how: '给这类场景定一个"默认选项"。比如吃什么 → 默认去最近的那家。省下的精力留给真正重要的决定。' },
+          { keys: ['忘','忘记','忘了','没做'],
+            why: '依赖记忆而不是系统，迟早会漏',
+            how: '设一个固定提醒或流程。比如每天早上 9 点看一遍待办，比"记在脑子里"可靠 10 倍。' },
+          { keys: ['重复','每次都','又','又来'],
+            why: '同样的事反复做，没有找到根本解法',
+            how: '把重复操作列出来，找一个能自动化或模板化的方案。哪怕只省 30 秒/次，一年下来也是几小时。' },
+          { keys: ['贵','花钱','买','消费','订阅','花'],
+            why: '小额支出没有感知，累积起来才发现不少',
+            how: '记一周账，只标"冲动买"和"忘了关订阅"的。看完你会发现哪些钱其实不必花。' },
+          { keys: ['卡','慢','崩溃','bug','出错','报错'],
+            why: '工具本身在消耗你的耐心',
+            how: '同类工具花 10 分钟对比一下。很多时候换个工具就能解决 80% 的烦躁。' },
+          { keys: ['绕','多一步','多此一举','麻烦'],
+            why: '流程设计不合理，多了一个不必要的环节',
+            how: '把这个流程画出来，找到那个"多出来的步骤"，看看能不能跳过或合并。' },
+          { keys: ['等人','等','排队','加载','响应'],
+            why: '你在为别人的节奏买单',
+            how: '把等待时间变成"小任务时间"——回一条消息、整理一下桌面。别让等待变成纯损耗。' },
+          { keys: ['加班','赶','来不及','时间不够'],
+            why: '时间被碎片化了，整块时间太少',
+            how: '每天留出 1-2 小时"勿扰模式"，关掉所有通知，集中处理最重要的事。' },
+          { keys: ['沟通','开会','讨论','协调'],
+            why: '信息在传递中失真或重复',
+            how: '下次开会前先发一条文字摘要，把结论和待办列清楚。能文字解决的不开会。' },
         ];
-        for (const rule of keywordMap) {
-          if (rule.keys.some(k => c.includes(k))) return rule.msg;
+
+        for (const rule of rules) {
+          if (rule.keys.some(k => c.includes(k))) {
+            return { why: rule.why, how: rule.how };
+          }
         }
+
         // Fallback by tag
-        const tagSuggestions = {
-          time: '这种重复耗时的事，值得花 10 分钟找一个一劳永逸的解法。',
-          money: '记一笔"冲动消费"，一个月后回看还觉得值得吗？',
-          tool: '同类工具对比一下，可能有更好的选择。',
-          habit: '选一个最小的改变，连续 7 天试试，观察变化。',
-          other: '下次遇到「算了」的瞬间，花 5 秒写下：理想的做法是什么？'
+        const tagFallback = {
+          time: { why: '这段时间被低效消耗了', how: '记录下来后观察：是工具问题、流程问题还是习惯问题？对症下药比泛泛改善有用。' },
+          money: { why: '这笔支出超出了你的预期或需求', how: '问自己：如果没有这个东西，我的生活会变差吗？如果不会，这笔钱可以省。' },
+          tool: { why: '工具没有匹配你的实际使用场景', how: '花 10 分钟搜一下替代方案，看看有没有更贴合你需求的工具。' },
+          habit: { why: '这个习惯在不知不觉中消耗你的资源', how: '试着连续 3 天记录这个行为，看看它到底占了多少时间和精力。数据比感觉准。' },
+          other: { why: '这个摩擦被你"忍"下来了，但它客观存在', how: '如果不受限，你理想的做法是什么？写下来，然后看看有没有 80% 的替代方案。' },
         };
-        return tagSuggestions[tag] || tagSuggestions.other;
+        return tagFallback[tag] || tagFallback.other;
       }
 
       // ─── Client-side rule engine (batch) ───────────
