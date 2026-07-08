@@ -251,7 +251,15 @@
               </div>
               <button class="btn-primary" id="submit-entry" style="width:auto; align-self:flex-end;">记录</button>
             </div>
-            <div id="entry-msg" class="msg"></div>
+            <div id="entry-msg" class="msg">
+              ${(() => {
+                const s = getState().lastSuggestion;
+                if (s && s.at && (Date.now() - s.at < 60000)) {
+                  return '<div style="background:rgba(129,140,248,0.1); border:1px solid rgba(129,140,248,0.2); border-radius:8px; padding:10px 14px; margin-top:8px;"><span style="font-size:12px; color:var(--accent);">💡 试试：</span> <span style="font-size:13px; color:var(--fg2);">' + escHtml(s.text) + '</span></div>';
+                }
+                return '';
+              })()}
+            </div>
           </div>
 
           <div class="section">
@@ -307,13 +315,11 @@
             tag: selectedTag,
             createdAt: Date.now()
           });
-          // Show instant suggestion
+          // Store instant suggestion in state so it survives renderMain()
           const suggestion = getInstantSuggestion(selectedTag, text);
-          msgEl.innerHTML = '<div style="background:rgba(129,140,248,0.1); border:1px solid rgba(129,140,248,0.2); border-radius:8px; padding:10px 14px; margin-top:8px;"><span style="font-size:12px; color:var(--accent);">💡 试试：</span> <span style="font-size:13px; color:var(--fg2);">' + suggestion + '</span></div>';
-          msgEl.className = 'msg msg-ok';
+          state.set('lastSuggestion', { text: suggestion, tag: selectedTag, at: Date.now() });
           document.getElementById('entry-text').value = '';
-          // Refresh list after short delay (let state propagate)
-          setTimeout(() => renderMain(), 300);
+          renderMain();
         };
 
         // Logout
