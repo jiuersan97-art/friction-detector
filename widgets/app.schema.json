@@ -1,0 +1,11 @@
+{
+  "users": {
+    "description": "用户账户 (userId → {email, password, createdAt})"
+  },
+  "entries": {
+    "description": "摩擦记录 (entryId → {userId, content, tag, createdAt})"
+  },
+  "insights": {
+    "description": "AI 洞察 (insightId → {userId, type, content, createdAt})"
+  }
+}
