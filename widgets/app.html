@@ -101,268 +101,54 @@
       .header-logout { font-size: 12px; color: var(--fg3); cursor: pointer; }
       .header-logout:hover { color: var(--red); }
       .entry-input-wrap { display: flex; flex-direction: column; gap: 10px; }
+
+      .iframe-banner {
+        background: rgba(129,140,248,0.1); border: 1px solid rgba(129,140,248,0.2);
+        border-radius: var(--radius); padding: 12px 16px; margin-bottom: 16px;
+        text-align: center; font-size: 13px; color: var(--fg2);
+      }
+      .iframe-banner a {
+        color: var(--accent); text-decoration: underline; cursor: pointer;
+      }
+
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .spinner {
+        width: 16px; height: 16px; border: 2px solid rgba(129,140,248,0.3);
+        border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;
+        display: inline-block; vertical-align: middle; margin-right: 6px;
+      }
     </style>
   </head>
   <body>
     <div id="app" class="app">
       <div class="auth">
         <div class="auth-title">🔍 摩擦探测器</div>
-        <div class="auth-sub">发现你习惯了的痛点</div>
+        <div class="auth-sub">加载中...</div>
       </div>
     </div>
     <script>
     (function() {
-      const TAG_LABELS = { time: '⏰ 时间', money: '💸 消费', tool: '🔧 工具', habit: '🔄 习惯', other: '💬 其他' };
-      const state = window.ResonWidget && ResonWidget.state;
-      const app = document.getElementById('app');
-      let currentUserId = null;
-
-      // ─── State helpers ─────────────────────────────
-      function getState() { return state ? (state.get() || {}) : {}; }
-      function getUsers() { return getState().users || {}; }
-      function getEntries() { return getState().entries || {}; }
-      function getInsights() { return getState().insights || {}; }
-
-      // ─── Auth ──────────────────────────────────────
-      function renderAuth() {
-        let isLogin = true;
-        function draw() {
-          app.innerHTML = `
-            <div class="auth">
-              <div>
-                <div class="auth-title">${isLogin ? '登录' : '注册'}</div>
-                <div class="auth-sub">生活摩擦探测器</div>
-              </div>
-              <form class="auth-form" id="auth-form">
-                <input type="email" id="auth-email" placeholder="邮箱" required />
-                <input type="password" id="auth-pwd" placeholder="密码 (至少6位)" required minlength="6" />
-                <button class="btn-primary" type="submit">${isLogin ? '登录' : '注册'}</button>
-              </form>
-              <div class="auth-toggle" id="auth-toggle">
-                ${isLogin ? '没有账号？点此注册' : '已有账号？点此登录'}
-              </div>
-              <div id="auth-msg" class="msg"></div>
-            </div>
-          `;
-          document.getElementById('auth-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('auth-email').value.trim().toLowerCase();
-            const pwd = document.getElementById('auth-pwd').value;
-            const msgEl = document.getElementById('auth-msg');
-            msgEl.textContent = '';
-
-            if (!state) {
-              msgEl.textContent = '请在 Bloome 中打开此页面';
-              msgEl.className = 'msg msg-err';
-              return;
-            }
-
-            const users = getUsers();
-
-            if (isLogin) {
-              // Find user by email
-              const found = Object.entries(users).find(([_, u]) => u.email === email);
-              if (!found) {
-                msgEl.textContent = '账号不存在';
-                msgEl.className = 'msg msg-err';
-                return;
-              }
-              const [uid, user] = found;
-              if (user.password !== pwd) {
-                msgEl.textContent = '密码错误';
-                msgEl.className = 'msg msg-err';
-                return;
-              }
-              currentUserId = uid;
-              renderMain();
-            } else {
-              // Check if email exists
-              const exists = Object.values(users).some(u => u.email === email);
-              if (exists) {
-                msgEl.textContent = '邮箱已注册';
-                msgEl.className = 'msg msg-err';
-                return;
-              }
-              if (pwd.length < 6) {
-                msgEl.textContent = '密码至少6位';
-                msgEl.className = 'msg msg-err';
-                return;
-              }
-              // Create user
-              const uid = 'u_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-              state.set('users.' + uid, { email, password: pwd, createdAt: Date.now() });
-              currentUserId = uid;
-              renderMain();
-            }
-          };
-          document.getElementById('auth-toggle').onclick = () => { isLogin = !isLogin; draw(); };
-        }
-        draw();
-      }
-
-      // ─── Main app ──────────────────────────────────
-      function renderMain() {
-        const entries = getEntries();
-        const userEntries = Object.entries(entries)
-          .filter(([_, e]) => e.userId === currentUserId)
-          .sort((a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0))
-          .slice(0, 20);
-
-        const users = getUsers();
-        const currentUser = users[currentUserId] || {};
-
-        // Compute insights on the fly
-        const myEntries = userEntries.map(([_, e]) => e);
-        const insights = computeInsights(myEntries);
-
-        // Stats
-        const tagCounts = {};
-        myEntries.forEach(e => { const t = e.tag || 'other'; tagCounts[t] = (tagCounts[t] || 0) + 1; });
-        const topTag = Object.entries(tagCounts).sort((a, b) => b[1] - a[1])[0];
-
-        app.innerHTML = `
-          <div class="header">
-            <div>
-              <div class="header-title">🔍 摩擦探测器</div>
-              <div class="header-email">${escHtml(currentUser.email || '')}</div>
-            </div>
-            <div class="header-logout" id="logout">退出</div>
-          </div>
-
-          <div class="stats">
-            <div class="stat-card">
-              <div class="stat-val">${myEntries.length}</div>
-              <div class="stat-label">总记录</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-val">${topTag ? TAG_LABELS[topTag[0]].split(' ')[0] : '—'}</div>
-              <div class="stat-label">最多类型</div>
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="section-title">✏️ 记录一条摩擦</div>
-            <div class="entry-input-wrap">
-              <textarea class="entry-text" id="entry-text" placeholder="今天什么事让你觉得「算了就这样吧」？" rows="2"></textarea>
-              <div class="tag-row" id="tag-row">
-                ${Object.entries(TAG_LABELS).map(([k, v]) =>
-                  `<button class="tag-btn${k === 'other' ? ' active' : ''}" data-tag="${k}">${v}</button>`
-                ).join('')}
-              </div>
-              <button class="btn-primary" id="submit-entry" style="width:auto; align-self:flex-end;">记录</button>
-            </div>
-            <div id="entry-msg" class="msg">
-              ${(() => {
-                const s = getState().lastSuggestion;
-                if (!s || !s.at) return '';
-                if (s.loading) {
-                  return `<div style="background:rgba(129,140,248,0.08); border:1px solid rgba(129,140,248,0.15); border-radius:10px; padding:14px; margin-top:10px;">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                      <div style="width:16px; height:16px; border:2px solid rgba(129,140,248,0.3); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite;"></div>
-                      <span style="font-size:13px; color:var(--accent);">AI 正在分析你的记录...</span>
-                    </div>
-                  </div>
-                  <style>@keyframes spin { to { transform: rotate(360deg); } }</style>`;
-                }
-                if (Date.now() - s.at < 120000) {
-                  return `<div style="background:rgba(129,140,248,0.08); border:1px solid rgba(129,140,248,0.15); border-radius:10px; padding:14px; margin-top:10px;">
-                    <div style="font-size:12px; color:var(--accent); font-weight:500; margin-bottom:6px;">📋 分析</div>
-                    <div style="font-size:13px; color:var(--fg2); margin-bottom:10px;">${escHtml(s.why)}</div>
-                    <div style="font-size:12px; color:var(--accent); font-weight:500; margin-bottom:6px;">💡 具体方案</div>
-                    <div style="font-size:13px; color:var(--fg); line-height:1.6;">${escHtml(s.how)}</div>
-                  </div>`;
-                }
-                return '';
-              })()}
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="section-title">💡 AI 洞察</div>
-            ${myEntries.length < 3
-              ? `<div class="empty"><div class="empty-icon">📊</div>再记录 ${3 - myEntries.length} 条就能看到洞察</div>`
-              : insights.map(i => `
-                <div class="insight-card">
-                  <span class="insight-type">${typeLabel(i.type)}</span>
-                  <div class="insight-text">${i.content}</div>
-                </div>
-              `).join('')}
-          </div>
-
-          <div class="section">
-            <div class="section-title">📋 最近记录</div>
-            ${userEntries.length === 0
-              ? '<div class="empty"><div class="empty-icon">✨</div>还没有记录，开始你的第一条吧</div>'
-              : `<div class="entry-list">
-                ${userEntries.map(([_, e]) => `
-                  <div class="entry-item">
-                    <span class="entry-tag">${TAG_LABELS[e.tag] || '💬 其他'}</span>
-                    <div>
-                      <div class="entry-content">${escHtml(e.content)}</div>
-                      <div class="entry-time">${timeAgo(e.createdAt)}</div>
-                    </div>
-                  </div>
-                `).join('')}
-              </div>`}
-          </div>
-        `;
-
-        // Tag selection
-        let selectedTag = 'other';
-        document.querySelectorAll('.tag-btn').forEach(btn => {
-          btn.onclick = () => {
-            document.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            selectedTag = btn.dataset.tag;
-          };
-        });
-
-        // Submit entry
-        document.getElementById('submit-entry').onclick = async () => {
-          const text = document.getElementById('entry-text').value.trim();
-          const msgEl = document.getElementById('entry-msg');
-          if (!text) { msgEl.textContent = '写点什么吧'; msgEl.className = 'msg msg-err'; return; }
-          if (!state) { msgEl.textContent = '状态不可用'; msgEl.className = 'msg msg-err'; return; }
-
-          const btn = document.getElementById('submit-entry');
-          const origText = btn.textContent;
-          btn.disabled = true; btn.textContent = '🤖 分析中...'; btn.style.opacity = '0.7';
-
-          const entryId = 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-          state.set('entries.' + entryId, {
-            userId: currentUserId,
-            content: text,
-            tag: selectedTag,
-            createdAt: Date.now()
-          });
-
-          // Show loading state immediately
-          state.set('lastSuggestion', { why: 'AI 正在分析你的记录...', how: '请稍候', at: Date.now(), loading: true });
-          document.getElementById('entry-text').value = '';
-          renderMain();
-
-          // Try AI, fallback to rule engine
-          let suggestion = await aiAnalyze(text, selectedTag);
-          if (!suggestion) {
-            const fb = getInstantSuggestion(selectedTag, text);
-            suggestion = { why: fb.why, how: fb.how };
-          }
-          state.set('lastSuggestion', { ...suggestion, at: Date.now(), loading: false });
-          btn.disabled = false; btn.textContent = origText; btn.style.opacity = '1';
-          renderMain();
-        };
-
-        // Logout
-        document.getElementById('logout').onclick = () => {
-          currentUserId = null;
-          renderAuth();
-        };
-      }
-
-      // ─── AI Analysis via AgnesAI ───────────────────
+      const API_BASE = 'https://fast-escargot-5192.youware.pro';
       const AGNES_KEY = 'sk-SQFmWrmk32XJWZlTUEPO6x63AsCRo4zIRzWmbGwu84jdKp3y';
       const AGNES_URL = 'https://apihub.agnes-ai.com/v1/chat/completions';
+      const TAG_LABELS = { time: '⏰ 时间', money: '💸 消费', tool: '🔧 工具', habit: '🔄 习惯', other: '💬 其他' };
 
+      const app = document.getElementById('app');
+      let token = localStorage.getItem('friction_token');
+      let currentUserEmail = localStorage.getItem('friction_email') || '';
+
+      // Detect iframe
+      const inIframe = window.self !== window.top;
+
+      // ─── API helper ────────────────────────────────
+      async function api(path, opts = {}) {
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        const res = await fetch(API_BASE + path, { ...opts, headers: { ...headers, ...opts.headers } });
+        return res.json();
+      }
+
+      // ─── AI Analysis ───────────────────────────────
       async function aiAnalyze(content, tag) {
         const tagLabels = { time: '时间浪费', money: '隐性消费', tool: '工具不顺手', habit: '不良习惯', other: '其他摩擦' };
         const prompt = `你是一个生活摩擦分析助手。用户记录了一条日常摩擦：
@@ -377,144 +163,176 @@
 
 💡 具体方案
 [针对这个具体场景的1-2句可操作建议，要具体到步骤，不要泛泛而谈]`;
-
         try {
           const res = await fetch(AGNES_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AGNES_KEY },
-            body: JSON.stringify({
-              model: 'agnes-2.0-flash',
-              messages: [{ role: 'user', content: prompt }],
-              max_tokens: 200,
-              temperature: 0.7
-            })
+            body: JSON.stringify({ model: 'agnes-2.0-flash', messages: [{ role: 'user', content: prompt }], max_tokens: 200, temperature: 0.7 })
           });
           const data = await res.json();
           const text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
-          // Parse the response
           const whyMatch = text.match(/📋\s*分析\s*\n([\s\S]*?)(?=💡|$)/);
           const howMatch = text.match(/💡\s*具体方案\s*\n([\s\S]*?)$/);
-          return {
-            why: whyMatch ? whyMatch[1].trim() : '这个摩擦反映了你的某个未被优化的日常环节',
-            how: howMatch ? howMatch[1].trim() : '试着记录更多细节，找到具体的改善点'
+          return { why: whyMatch?.[1]?.trim() || '这个摩擦反映了你的某个未被优化的日常环节', how: howMatch?.[1]?.trim() || '试着记录更多细节，找到具体的改善点' };
+        } catch (e) { return null; }
+      }
+
+      // ─── Auth ──────────────────────────────────────
+      function renderAuth() {
+        let isLogin = true;
+        function draw() {
+          const iframeMsg = inIframe ? `<div class="iframe-banner">在 iframe 中部分功能受限，<a id="open-new-tab">在新窗口打开</a> 获得完整体验</div>` : '';
+          app.innerHTML = `
+            ${iframeMsg}
+            <div class="auth">
+              <div>
+                <div class="auth-title">${isLogin ? '登录' : '注册'}</div>
+                <div class="auth-sub">生活摩擦探测器</div>
+              </div>
+              <form class="auth-form" id="auth-form">
+                <input type="email" id="auth-email" placeholder="邮箱" required />
+                <input type="password" id="auth-pwd" placeholder="密码 (至少6位)" required minlength="6" />
+                <button class="btn-primary" type="submit">${isLogin ? '登录' : '注册'}</button>
+              </form>
+              <div class="auth-toggle" id="auth-toggle">${isLogin ? '没有账号？点此注册' : '已有账号？点此登录'}</div>
+              <div id="auth-msg" class="msg"></div>
+            </div>`;
+          if (inIframe) document.getElementById('open-new-tab').onclick = () => window.open(window.location.href, '_blank');
+          document.getElementById('auth-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value.trim().toLowerCase();
+            const pwd = document.getElementById('auth-pwd').value;
+            const msgEl = document.getElementById('auth-msg');
+            const endpoint = isLogin ? '/api/public/login' : '/api/public/signup';
+            try {
+              const data = await api(endpoint, { method: 'POST', body: JSON.stringify({ email, password: pwd }) });
+              if (data.ok) {
+                token = data.token; currentUserEmail = email;
+                localStorage.setItem('friction_token', token);
+                localStorage.setItem('friction_email', email);
+                renderMain();
+              } else { msgEl.textContent = data.error || '失败'; msgEl.className = 'msg msg-err'; }
+            } catch (err) { msgEl.textContent = '网络错误，请在新窗口中打开'; msgEl.className = 'msg msg-err'; }
           };
-        } catch (e) {
-          console.error('AI analyze failed:', e);
-          return null; // fallback to rule engine
+          document.getElementById('auth-toggle').onclick = () => { isLogin = !isLogin; draw(); };
         }
+        draw();
       }
 
-      // ─── Instant suggestion per entry ──────────────
-      function getInstantSuggestion(tag, content) {
-        const c = content.toLowerCase();
+      // ─── Main app ──────────────────────────────────
+      async function renderMain() {
+        app.innerHTML = '<div style="text-align:center;padding:40px;color:var(--fg3);">加载中...</div>';
 
-        // Analyze the specific friction and give concrete advice
-        const rules = [
-          // Time-related specific
-          { keys: ['通知','提醒','弹窗','推送','消息'],
-            why: '你的注意力被无关通知打断了',
-            how: '关掉非紧急 App 的通知（微信/钉钉除外），一天能省 15-30 分钟。路径：设置 → 通知 → 逐个 App 关。' },
-          { keys: ['找','翻','搜索','找不到','文件','笔记'],
-            why: '信息没有统一存放，每次都在"找"上浪费时间',
-            how: '建一个简单的文件夹规则（比如按日期或项目名），每周花 5 分钟整理，以后找东西不超过 10 秒。' },
-          { keys: ['纠结','选择','决定','不知道','选哪个'],
-            why: '决策成本太高，小事消耗了大精力',
-            how: '给这类场景定一个"默认选项"。比如吃什么 → 默认去最近的那家。省下的精力留给真正重要的决定。' },
-          { keys: ['忘','忘记','忘了','没做'],
-            why: '依赖记忆而不是系统，迟早会漏',
-            how: '设一个固定提醒或流程。比如每天早上 9 点看一遍待办，比"记在脑子里"可靠 10 倍。' },
-          { keys: ['重复','每次都','又','又来'],
-            why: '同样的事反复做，没有找到根本解法',
-            how: '把重复操作列出来，找一个能自动化或模板化的方案。哪怕只省 30 秒/次，一年下来也是几小时。' },
-          { keys: ['贵','花钱','买','消费','订阅','花'],
-            why: '小额支出没有感知，累积起来才发现不少',
-            how: '记一周账，只标"冲动买"和"忘了关订阅"的。看完你会发现哪些钱其实不必花。' },
-          { keys: ['卡','慢','崩溃','bug','出错','报错'],
-            why: '工具本身在消耗你的耐心',
-            how: '同类工具花 10 分钟对比一下。很多时候换个工具就能解决 80% 的烦躁。' },
-          { keys: ['绕','多一步','多此一举','麻烦'],
-            why: '流程设计不合理，多了一个不必要的环节',
-            how: '把这个流程画出来，找到那个"多出来的步骤"，看看能不能跳过或合并。' },
-          { keys: ['等人','等','排队','加载','响应'],
-            why: '你在为别人的节奏买单',
-            how: '把等待时间变成"小任务时间"——回一条消息、整理一下桌面。别让等待变成纯损耗。' },
-          { keys: ['加班','赶','来不及','时间不够'],
-            why: '时间被碎片化了，整块时间太少',
-            how: '每天留出 1-2 小时"勿扰模式"，关掉所有通知，集中处理最重要的事。' },
-          { keys: ['沟通','开会','讨论','协调'],
-            why: '信息在传递中失真或重复',
-            how: '下次开会前先发一条文字摘要，把结论和待办列清楚。能文字解决的不开会。' },
-        ];
+        let entries = [], insightsList = [], insightMsg = '';
+        try {
+          const [entriesRes, insightsRes] = await Promise.all([
+            api('/api/public/entries?limit=20').catch(() => ({ ok: false })),
+            api('/api/public/insights').catch(() => ({ ok: false }))
+          ]);
+          entries = entriesRes.ok ? (entriesRes.entries || []) : [];
+          insightsList = insightsRes.ok ? (insightsRes.insights || []) : [];
+          insightMsg = insightsRes.message || '';
+        } catch (e) { renderAuth(); return; }
 
-        for (const rule of rules) {
-          if (rule.keys.some(k => c.includes(k))) {
-            return { why: rule.why, how: rule.how };
-          }
-        }
-
-        // Fallback by tag
-        const tagFallback = {
-          time: { why: '这段时间被低效消耗了', how: '记录下来后观察：是工具问题、流程问题还是习惯问题？对症下药比泛泛改善有用。' },
-          money: { why: '这笔支出超出了你的预期或需求', how: '问自己：如果没有这个东西，我的生活会变差吗？如果不会，这笔钱可以省。' },
-          tool: { why: '工具没有匹配你的实际使用场景', how: '花 10 分钟搜一下替代方案，看看有没有更贴合你需求的工具。' },
-          habit: { why: '这个习惯在不知不觉中消耗你的资源', how: '试着连续 3 天记录这个行为，看看它到底占了多少时间和精力。数据比感觉准。' },
-          other: { why: '这个摩擦被你"忍"下来了，但它客观存在', how: '如果不受限，你理想的做法是什么？写下来，然后看看有没有 80% 的替代方案。' },
-        };
-        return tagFallback[tag] || tagFallback.other;
-      }
-
-      // ─── Client-side rule engine (batch) ───────────
-      function computeInsights(entries) {
-        if (entries.length < 3) return [];
-        const result = [];
-
-        // Frequency
-        const span = entries.length > 1
-          ? (entries[0].createdAt - entries[entries.length - 1].createdAt) / (24*60*60*1000)
-          : 1;
-        const pace = (entries.length / Math.max(span, 1)).toFixed(1);
-        result.push({ type: 'frequency', content: `你已经记录了 ${entries.length} 条摩擦，平均每天 ${pace} 条。` });
-
-        // Pattern
         const tagCounts = {};
         entries.forEach(e => { const t = e.tag || 'other'; tagCounts[t] = (tagCounts[t] || 0) + 1; });
-        const sorted = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
-        if (sorted.length > 0) {
-          const labels = { time: '时间浪费', money: '隐性消费', tool: '工具不顺手', habit: '不良习惯', other: '其他摩擦' };
-          const [top, cnt] = sorted[0];
-          const pct = Math.round((cnt / entries.length) * 100);
-          result.push({ type: 'pattern', content: `你 ${pct}% 的摩擦跟「${labels[top] || top}」有关。` });
-        }
+        const topTag = Object.entries(tagCounts).sort((a, b) => b[1] - a[1])[0];
 
-        // Suggestion
-        if (sorted.length > 0) {
-          const suggestions = {
-            time: '试试番茄工作法或时间块——把「算了」的时间段切出来，专门处理。',
-            money: '记一周账，重点标记「顺手买」和「忘了关」的订阅。',
-            tool: '花 10 分钟搜一下你最常用的工具有没有更快的替代方案。',
-            habit: '选一个最小的「算了」场景，连续 7 天用不同方式应对，观察变化。',
-            other: '下次遇到「算了」的瞬间，花 5 秒写下：如果不受限，我理想的做法是什么？'
-          };
-          result.push({ type: 'suggestion', content: suggestions[sorted[0][0]] || suggestions.other });
-        }
+        const iframeMsg = inIframe ? `<div class="iframe-banner">在 iframe 中部分功能受限，<a id="open-new-tab-main">在新窗口打开</a></div>` : '';
 
-        // Streak
-        const daySet = new Set(entries.map(e => new Date(e.createdAt).toISOString().slice(0, 10)));
-        let streak = 0;
-        const today = new Date();
-        for (let i = 0; i < 30; i++) {
-          const d = new Date(today); d.setDate(d.getDate() - i);
-          if (daySet.has(d.toISOString().slice(0, 10))) streak++; else break;
-        }
-        if (streak >= 3) result.push({ type: 'streak', content: `连续 ${streak} 天记录，坚持得很好。` });
+        app.innerHTML = `
+          ${iframeMsg}
+          <div class="header">
+            <div>
+              <div class="header-title">🔍 摩擦探测器</div>
+              <div class="header-email">${escHtml(currentUserEmail)}</div>
+            </div>
+            <div class="header-logout" id="logout">退出</div>
+          </div>
+          <div class="stats">
+            <div class="stat-card"><div class="stat-val">${entries.length}</div><div class="stat-label">总记录</div></div>
+            <div class="stat-card"><div class="stat-val">${topTag ? TAG_LABELS[topTag[0]].split(' ')[0] : '—'}</div><div class="stat-label">最多类型</div></div>
+          </div>
+          <div class="section">
+            <div class="section-title">✏️ 记录一条摩擦</div>
+            <div class="entry-input-wrap">
+              <textarea class="entry-text" id="entry-text" placeholder="今天什么事让你觉得「算了就这样吧」？" rows="2"></textarea>
+              <div class="tag-row" id="tag-row">
+                ${Object.entries(TAG_LABELS).map(([k, v]) => `<button class="tag-btn${k === 'other' ? ' active' : ''}" data-tag="${k}">${v}</button>`).join('')}
+              </div>
+              <button class="btn-primary" id="submit-entry" style="width:auto;align-self:flex-end;">记录</button>
+            </div>
+            <div id="entry-msg" class="msg"></div>
+            <div id="ai-result"></div>
+          </div>
+          <div class="section">
+            <div class="section-title">💡 AI 洞察</div>
+            ${insightsList.length === 0 ? `<div class="empty">${insightMsg || '<div class="empty-icon">📊</div>记录 3 条后就能看到洞察'}</div>` : ''}
+            ${insightsList.map(i => `<div class="insight-card"><span class="insight-type">${typeLabel(i.type)}</span><div class="insight-text">${escHtml(i.content)}</div></div>`).join('')}
+          </div>
+          <div class="section">
+            <div class="section-title">📋 最近记录</div>
+            ${entries.length === 0 ? '<div class="empty"><div class="empty-icon">✨</div>还没有记录，开始你的第一条吧</div>' : ''}
+            <div class="entry-list">
+              ${entries.map(e => `<div class="entry-item"><span class="entry-tag">${TAG_LABELS[e.tag] || '💬 其他'}</span><div><div class="entry-content">${escHtml(e.content)}</div><div class="entry-time">${timeAgo(e.createdAt)}</div></div></div>`).join('')}
+            </div>
+          </div>`;
 
-        return result;
+        if (inIframe) { const el = document.getElementById('open-new-tab-main'); if (el) el.onclick = () => window.open(window.location.href, '_blank'); }
+
+        let selectedTag = 'other';
+        document.querySelectorAll('.tag-btn').forEach(btn => {
+          btn.onclick = () => { document.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); selectedTag = btn.dataset.tag; };
+        });
+
+        document.getElementById('submit-entry').onclick = async () => {
+          const text = document.getElementById('entry-text').value.trim();
+          const msgEl = document.getElementById('entry-msg');
+          const resultEl = document.getElementById('ai-result');
+          if (!text) { msgEl.textContent = '写点什么吧'; msgEl.className = 'msg msg-err'; return; }
+
+          const btn = document.getElementById('submit-entry');
+          btn.disabled = true; btn.textContent = '🤖 分析中...'; btn.style.opacity = '0.7';
+
+          try {
+            const res = await api('/api/public/entries', { method: 'POST', body: JSON.stringify({ content: text, tag: selectedTag }) });
+            if (!res.ok) { msgEl.textContent = res.error || '提交失败'; msgEl.className = 'msg msg-err'; btn.disabled = false; btn.textContent = '记录'; btn.style.opacity = '1'; return; }
+          } catch (e) { msgEl.textContent = '网络错误'; msgEl.className = 'msg msg-err'; btn.disabled = false; btn.textContent = '记录'; btn.style.opacity = '1'; return; }
+
+          // Show loading
+          resultEl.innerHTML = '<div style="background:rgba(129,140,248,0.08);border:1px solid rgba(129,140,248,0.15);border-radius:10px;padding:14px;margin-top:10px;"><span class="spinner"></span><span style="font-size:13px;color:var(--accent);">AI 正在分析你的记录...</span></div>';
+          document.getElementById('entry-text').value = '';
+
+          const suggestion = await aiAnalyze(text, selectedTag);
+          if (suggestion) {
+            resultEl.innerHTML = `<div style="background:rgba(129,140,248,0.08);border:1px solid rgba(129,140,248,0.15);border-radius:10px;padding:14px;margin-top:10px;">
+              <div style="font-size:12px;color:var(--accent);font-weight:500;margin-bottom:6px;">📋 分析</div>
+              <div style="font-size:13px;color:var(--fg2);margin-bottom:10px;">${escHtml(suggestion.why)}</div>
+              <div style="font-size:12px;color:var(--accent);font-weight:500;margin-bottom:6px;">💡 具体方案</div>
+              <div style="font-size:13px;color:var(--fg);line-height:1.6;">${escHtml(suggestion.how)}</div>
+            </div>`;
+          } else {
+            resultEl.innerHTML = '';
+          }
+
+          btn.disabled = false; btn.textContent = '记录'; btn.style.opacity = '1';
+          // Refresh entries list
+          try {
+            const entriesRes = await api('/api/public/entries?limit=20');
+            if (entriesRes.ok) renderMain();
+          } catch (e) {}
+        };
+
+        document.getElementById('logout').onclick = () => {
+          token = null; currentUserEmail = null;
+          localStorage.removeItem('friction_token');
+          localStorage.removeItem('friction_email');
+          renderAuth();
+        };
       }
 
       // ─── Helpers ───────────────────────────────────
-      function typeLabel(t) {
-        return { frequency: '📈 频率', pattern: '🔍 模式', suggestion: '💡 建议', streak: '🔥 连续' }[t] || t;
-      }
+      function typeLabel(t) { return { frequency: '📈 频率', pattern: '🔍 模式', suggestion: '💡 建议', streak: '🔥 连续' }[t] || t; }
       function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
       function timeAgo(ts) {
         const d = Date.now() - ts;
@@ -525,12 +343,15 @@
       }
 
       // ─── Init ──────────────────────────────────────
-      if (state) {
-        state.on('change', () => {
-          if (currentUserId) renderMain();
-        });
+      if (token) {
+        // Verify token is still valid
+        api('/api/public/entries?limit=1').then(res => {
+          if (res.ok) renderMain();
+          else { token = null; localStorage.removeItem('friction_token'); renderAuth(); }
+        }).catch(() => renderAuth());
+      } else {
+        renderAuth();
       }
-      renderAuth();
     })();
     </script>
   </body>
