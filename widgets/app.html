@@ -159,12 +159,23 @@
       const TAG_LABELS = { time: '⏰ 时间', money: '💸 消费', tool: '🔧 工具', habit: '🔄 习惯', other: '💬 其他' };
 
       // ─── API helper ────────────────────────────────
-      const API_BASE = 'https://fast-escargot-5192.youware.pro';
+      // Use EdgeSpark bridge when available (avoids iframe CORS/CSP issues)
+      // Fallback to direct fetch for public share links
+      const hasEdgeSpark = !!(window.ResonWidget && ResonWidget.edgespark);
       async function api(path, opts = {}) {
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = 'Bearer ' + token;
-        const res = await fetch(API_BASE + path, { ...opts, headers: { ...headers, ...opts.headers } });
-        return res.json();
+        try {
+          if (hasEdgeSpark) {
+            const res = await ResonWidget.edgespark.fetch(path, { ...opts, headers: { ...headers, ...opts.headers } });
+            return await res.json();
+          }
+          const res = await fetch('https://fast-escargot-5192.youware.pro' + path, { ...opts, headers: { ...headers, ...opts.headers } });
+          return await res.json();
+        } catch (e) {
+          console.error('API error:', e);
+          return { ok: false, error: e.message || 'network error' };
+        }
       }
 
       // ─── Auth ──────────────────────────────────────
