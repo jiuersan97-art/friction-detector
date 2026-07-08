@@ -1,0 +1,19 @@
+{
+  "name": "bloome-edgespark-friction-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.1",
+    "hono": "^4.10.5",
+    "jose": "^6.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "drizzle-kit": "^0.30.6",
+    "typescript": "^5.9.3"
+  }
+}

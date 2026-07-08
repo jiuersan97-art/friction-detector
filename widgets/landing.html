@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>生活摩擦探测器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: 'Noto Sans SC', sans-serif;
+        background: #0f172a;
+        color: #e2e8f0;
+        -webkit-font-smoothing: antialiased;
+      }
+      .hero-glow {
+        position: absolute;
+        width: 600px; height: 600px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%);
+        top: -200px; left: 50%;
+        transform: translateX(-50%);
+        pointer-events: none;
+      }
+      .friction-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 16px;
+        padding: 28px 24px;
+        transition: all 0.3s ease;
+      }
+      .friction-card:hover {
+        background: rgba(255,255,255,0.06);
+        border-color: rgba(255,255,255,0.1);
+        transform: translateY(-2px);
+      }
+      .step-line {
+        position: absolute;
+        left: 20px; top: 44px; bottom: 0;
+        width: 2px;
+        background: linear-gradient(to bottom, rgba(99,102,241,0.4), rgba(99,102,241,0));
+      }
+      .email-input {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+        padding: 14px 18px;
+        color: #e2e8f0;
+        font-size: 16px;
+        width: 100%;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .email-input:focus {
+        border-color: rgba(99,102,241,0.6);
+      }
+      .email-input::placeholder {
+        color: #64748b;
+      }
+      .cta-btn {
+        background: linear-gradient(135deg, #6366f1, #818cf8);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 14px 28px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        width: 100%;
+      }
+      .cta-btn:hover {
+        background: linear-gradient(135deg, #5558e6, #7577f5);
+        transform: translateY(-1px);
+        box-shadow: 0 8px 24px rgba(99,102,241,0.3);
+      }
+      .cta-btn:active {
+        transform: translateY(0);
+      }
+      .cta-btn:disabled {
+        opacity: 0.6;
+        cursor: default;
+        transform: none;
+        box-shadow: none;
+      }
+      .b2b-btn {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: #94a3b8;
+        border-radius: 12px;
+        padding: 12px 20px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+        width: 100%;
+      }
+      .b2b-btn:hover {
+        background: rgba(255,255,255,0.08);
+        border-color: rgba(255,255,255,0.15);
+        color: #cbd5e1;
+      }
+      .quote-mark {
+        font-size: 48px;
+        line-height: 1;
+        color: rgba(99,102,241,0.3);
+        font-family: Georgia, serif;
+      }
+      .insight-demo {
+        background: rgba(99,102,241,0.08);
+        border: 1px solid rgba(99,102,241,0.15);
+        border-radius: 16px;
+        padding: 24px;
+      }
+      .insight-tag {
+        display: inline-block;
+        background: rgba(99,102,241,0.15);
+        color: #a5b4fc;
+        border-radius: 20px;
+        padding: 4px 12px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .signup-count {
+        display: inline-block;
+        background: rgba(34,197,94,0.1);
+        border: 1px solid rgba(34,197,94,0.2);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 13px;
+        color: #4ade80;
+        margin-bottom: 20px;
+      }
+      @media (max-width: 640px) {
+        .hero-title { font-size: 28px !important; }
+        .hero-sub { font-size: 16px !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Hero -->
+    <section style="position:relative; overflow:hidden; padding: 80px 24px 60px; text-align:center;">
+      <div class="hero-glow"></div>
+      <div style="position:relative; max-width:640px; margin:0 auto;">
+        <div style="display:inline-block; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); border-radius:24px; padding:6px 16px; font-size:13px; color:#a5b4fc; margin-bottom:24px;">
+          🔍 内测招募中
+        </div>
+        <h1 class="hero-title" style="font-size:36px; font-weight:700; line-height:1.3; margin-bottom:16px; color:#f8fafc;">
+          你每天忍着的那些「算了」，<br/>
+          <span style="color:#818cf8;">其实都是信号</span>
+        </h1>
+        <p class="hero-sub" style="font-size:18px; color:#94a3b8; line-height:1.7; max-width:480px; margin:0 auto 36px;">
+          生活摩擦探测器——帮你发现那些已经被你习惯掉的痛点，<br/>然后给你一个今晚就能试的改变。
+        </p>
+        <a href="#signup" style="display:inline-block; background:linear-gradient(135deg,#6366f1,#818cf8); color:white; border-radius:12px; padding:14px 32px; font-size:16px; font-weight:600; text-decoration:none; transition:all 0.2s;">
+          加入内测 →
+        </a>
+      </div>
+    </section>
+
+    <!-- Pain Points -->
+    <section style="max-width:680px; margin:0 auto; padding:48px 24px;">
+      <p style="text-align:center; font-size:14px; color:#64748b; margin-bottom:8px;">你可能没意识到，但……</p>
+      <h2 style="text-align:center; font-size:24px; font-weight:600; margin-bottom:36px; color:#e2e8f0;">
+        这些场景，你中了几个？
+      </h2>
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div class="friction-card">
+          <div style="display:flex; align-items:flex-start; gap:14px;">
+            <span style="font-size:24px; flex-shrink:0; margin-top:2px;">😤</span>
+            <div>
+              <div style="font-weight:600; margin-bottom:4px; color:#f1f5f9;">「每次找那个文件都要翻半天」</div>
+              <div style="font-size:14px; color:#94a3b8; line-height:1.6;">你没想过整理，因为「也还好吧」。但算下来，一年浪费了 40+ 小时在找东西上。</div>
+            </div>
+          </div>
+        </div>
+        <div class="friction-card">
+          <div style="display:flex; align-items:flex-start; gap:14px;">
+            <span style="font-size:24px; flex-shrink:0; margin-top:2px;">😐</span>
+            <div>
+              <div style="font-weight:600; margin-bottom:4px; color:#f1f5f9;">「这个 App 用着还行吧」</div>
+              <div style="font-size:14px; color:#94a3b8; line-height:1.6;">其实你每天在第 3 步都会卡一下，但你已经把「绕过去」当成了正常操作。</div>
+            </div>
+          </div>
+        </div>
+        <div class="friction-card">
+          <div style="display:flex; align-items:flex-start; gap:14px;">
+            <span style="font-size:24px; flex-shrink:0; margin-top:2px;">💸</span>
+            <div>
+              <div style="font-weight:600; margin-bottom:4px; color:#f1f5f9;">「没花什么钱啊」</div>
+              <div style="font-size:14px; color:#94a3b8; line-height:1.6;">但月底一算，那些「顺手买的」「凑单的」「订阅忘了关的」加起来，够一次短途旅行了。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How It Works -->
+    <section style="max-width:680px; margin:0 auto; padding:48px 24px;">
+      <h2 style="text-align:center; font-size:24px; font-weight:600; margin-bottom:40px; color:#e2e8f0;">
+        它怎么帮你？
+      </h2>
+      <div style="display:flex; flex-direction:column; gap:32px; position:relative;">
+        <div class="step-line"></div>
+
+        <!-- Step 1 -->
+        <div style="display:flex; gap:16px; position:relative;">
+          <div style="width:42px; height:42px; border-radius:50%; background:rgba(99,102,241,0.15); border:2px solid rgba(99,102,241,0.3); display:flex; align-items:center; justify-content:center; font-weight:700; color:#818cf8; flex-shrink:0; z-index:1;">1</div>
+          <div style="padding-top:6px;">
+            <h3 style="font-size:18px; font-weight:600; margin-bottom:6px; color:#f1f5f9;">每天 30 秒，记录一个「算了」</h3>
+            <p style="font-size:14px; color:#94a3b8; line-height:1.7;">睡前弹一句轻问，一句话或一个表情就够了。不是写日记，是给摩擦一个出口。</p>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div style="display:flex; gap:16px; position:relative;">
+          <div style="width:42px; height:42px; border-radius:50%; background:rgba(99,102,241,0.15); border:2px solid rgba(99,102,241,0.3); display:flex; align-items:center; justify-content:center; font-weight:700; color:#818cf8; flex-shrink:0; z-index:1;">2</div>
+          <div style="padding-top:6px;">
+            <h3 style="font-size:18px; font-weight:600; margin-bottom:6px; color:#f1f5f9;">AI 帮你发现模式</h3>
+            <p style="font-size:14px; color:#94a3b8; line-height:1.7;">攒够几周数据，系统会主动告诉你：「你这周有 5 次\"算了\"都跟 XX 有关」。别人遇到类似情况通常怎么做。</p>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div style="display:flex; gap:16px; position:relative;">
+          <div style="width:42px; height:42px; border-radius:50%; background:rgba(99,102,241,0.15); border:2px solid rgba(99,102,241,0.3); display:flex; align-items:center; justify-content:center; font-weight:700; color:#818cf8; flex-shrink:0; z-index:1;">3</div>
+          <div style="padding-top:6px;">
+            <h3 style="font-size:18px; font-weight:600; margin-bottom:6px; color:#f1f5f9;">拿到一个今晚就能试的行动</h3>
+            <p style="font-size:14px; color:#94a3b8; line-height:1.7;">不说教，不灌鸡汤。一个具体的、极小的改变建议，试了就知道有没有用。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Insight Preview -->
+    <section style="max-width:680px; margin:0 auto; padding:24px 24px 48px;">
+      <div class="insight-demo">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+          <span class="insight-tag">示例洞察</span>
+        </div>
+        <div style="margin-bottom:12px;">
+          <span class="quote-mark">"</span>
+          <p style="font-size:16px; line-height:1.7; color:#e2e8f0; margin-top:-16px; padding-left:8px;">
+            你过去两周有 <strong style="color:#818cf8;">6 次</strong> 提到「算了」，都跟<strong>「多平台切换」</strong>有关。有类似困扰的用户中，<strong>73%</strong> 在启用统一通知后摩擦感下降。
+          </p>
+        </div>
+        <div style="background:rgba(255,255,255,0.04); border-radius:10px; padding:14px 16px; font-size:14px; color:#94a3b8;">
+          💡 <strong style="color:#c4b5fd;">今晚试试：</strong>把最常用的 3 个 App 通知合并到一个渠道，观察一周。
+        </div>
+      </div>
+    </section>
+
+    <!-- Email Capture -->
+    <section id="signup" style="max-width:520px; margin:0 auto; padding:48px 24px 64px; text-align:center;">
+      <h2 style="font-size:24px; font-weight:600; margin-bottom:8px; color:#f8fafc;">成为首批体验者</h2>
+      <p style="font-size:15px; color:#94a3b8; margin-bottom:20px;">内测免费，留下邮箱，上线第一时间通知你。</p>
+      <div id="signup-count-display" style="display:none; margin-bottom:20px;">
+        <span class="signup-count">已有 <span id="signup-count">0</span> 人加入内测</span>
+      </div>
+      <form id="signup-form" style="display:flex; flex-direction:column; gap:12px;">
+        <input id="signup-email" class="email-input" type="email" placeholder="your@email.com" required />
+        <button id="signup-btn" class="cta-btn" type="submit">加入内测</button>
+      </form>
+      <p id="signup-msg" style="font-size:14px; color:#22c55e; margin-top:12px; display:none;"></p>
+
+      <div style="margin-top:32px; padding-top:24px; border-top:1px solid rgba(255,255,255,0.06);">
+        <p style="font-size:13px; color:#64748b; margin-bottom:12px;">想为团队引入？</p>
+        <button class="b2b-btn" id="b2b-toggle">企业 / 团队合作咨询</button>
+        <div id="b2b-form" style="display:none; margin-top:12px;">
+          <form id="b2b-submit" style="display:flex; flex-direction:column; gap:10px;">
+            <input class="email-input" type="text" placeholder="公司 / 团队名称" style="font-size:14px; padding:12px 16px;" />
+            <input id="b2b-email" class="email-input" type="email" placeholder="联系邮箱" style="font-size:14px; padding:12px 16px;" />
+            <button class="cta-btn" type="submit" style="font-size:14px; padding:12px 20px; background:rgba(255,255,255,0.08);">提交</button>
+          </form>
+          <p id="b2b-msg" style="font-size:13px; color:#22c55e; margin-top:8px; display:none;">已收到，我们会尽快联系你。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer style="text-align:center; padding:24px; font-size:12px; color:#475569; border-top:1px solid rgba(255,255,255,0.04);">
+      生活摩擦探测器 · 让「算了」变成「原来可以不这样」
+    </footer>
+
+    <script>
+      (function() {
+        var state = window.ResonWidget && ResonWidget.state;
+        var EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        // Update signup count display
+        function updateCount() {
+          if (!state) return;
+          var s = state.get() || {};
+          var signups = s.signups || {};
+          var count = Object.keys(signups).length;
+          var el = document.getElementById('signup-count');
+          var wrap = document.getElementById('signup-count-display');
+          if (count > 0) {
+            el.textContent = count;
+            wrap.style.display = 'block';
+          }
+        }
+
+        // Signup form
+        document.getElementById('signup-form').addEventListener('submit', function(e) {
+          e.preventDefault();
+          var input = document.getElementById('signup-email');
+          var email = (input.value || '').trim().toLowerCase();
+          var btn = document.getElementById('signup-btn');
+          var msg = document.getElementById('signup-msg');
+
+          if (!email || !EMAIL_REGEX.test(email)) {
+            msg.textContent = '请输入有效的邮箱地址';
+            msg.style.color = '#ef4444';
+            msg.style.display = 'block';
+            return;
+          }
+
+          if (!state) {
+            msg.textContent = '提交失败，请在 Bloome 中打开此页面';
+            msg.style.color = '#ef4444';
+            msg.style.display = 'block';
+            return;
+          }
+
+          // Write to state — email as key to prevent duplicates
+          var now = new Date().toISOString();
+          state.set('signups.' + email, { email: email, at: now });
+
+          // UI feedback
+          msg.textContent = '✓ 已加入内测名单，上线会第一时间通知你！';
+          msg.style.color = '#22c55e';
+          msg.style.display = 'block';
+          input.value = '';
+          btn.textContent = '已加入 ✓';
+          btn.disabled = true;
+
+          setTimeout(updateCount, 500);
+        });
+
+        // B2B form
+        document.getElementById('b2b-toggle').addEventListener('click', function() {
+          document.getElementById('b2b-form').style.display = 'block';
+          this.style.display = 'none';
+        });
+
+        document.getElementById('b2b-submit').addEventListener('submit', function(e) {
+          e.preventDefault();
+          var emailInput = document.getElementById('b2b-email');
+          var email = (emailInput.value || '').trim().toLowerCase();
+          var msg = document.getElementById('b2b-msg');
+
+          if (!email || !EMAIL_REGEX.test(email)) {
+            return;
+          }
+
+          if (state) {
+            var now = new Date().toISOString();
+            state.set('b2b.' + email, { email: email, at: now });
+          }
+
+          msg.style.display = 'block';
+          this.querySelector('button').disabled = true;
+          this.querySelector('button').textContent = '已提交 ✓';
+        });
+
+        // Listen for state changes to update count
+        if (state) {
+          state.on('change', updateCount);
+          updateCount();
+        }
+      })();
+    </script>
+  </body>
+</html>

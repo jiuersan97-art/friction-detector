@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>生活摩擦探测器</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+    <style>
+      :root {
+        --bg: #0f172a; --bg2: #1e293b; --bg3: #334155;
+        --fg: #f1f5f9; --fg2: #94a3b8; --fg3: #64748b;
+        --accent: #818cf8; --accent2: #6366f1;
+        --green: #4ade80; --green-bg: rgba(34,197,94,0.1);
+        --red: #f87171;
+        --radius: 12px; --radius-sm: 8px;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: 'Sora', sans-serif;
+        background: var(--bg); color: var(--fg);
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+      }
+      .app { max-width: 480px; margin: 0 auto; padding: 16px; }
+
+      /* Auth screen */
+      .auth { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; gap: 24px; }
+      .auth-title { font-size: 24px; font-weight: 700; text-align: center; }
+      .auth-sub { font-size: 14px; color: var(--fg2); text-align: center; }
+      .auth-form { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+      .auth-toggle { font-size: 13px; color: var(--fg3); text-align: center; cursor: pointer; }
+      .auth-toggle:hover { color: var(--accent); }
+
+      /* Inputs */
+      input[type="email"], input[type="password"], input[type="text"] {
+        background: var(--bg2); border: 1px solid var(--bg3);
+        border-radius: var(--radius); padding: 12px 16px;
+        color: var(--fg); font-size: 15px; width: 100%; outline: none;
+        transition: border-color 0.2s; font-family: inherit;
+      }
+      input:focus { border-color: var(--accent); }
+      input::placeholder { color: var(--fg3); }
+
+      /* Buttons */
+      .btn-primary {
+        background: linear-gradient(135deg, var(--accent2), var(--accent));
+        color: white; border: none; border-radius: var(--radius);
+        padding: 12px 24px; font-size: 15px; font-weight: 600;
+        cursor: pointer; width: 100%; font-family: inherit;
+        transition: opacity 0.2s;
+      }
+      .btn-primary:hover { opacity: 0.9; }
+      .btn-primary:disabled { opacity: 0.5; cursor: default; }
+      .btn-ghost {
+        background: var(--bg2); border: 1px solid var(--bg3);
+        color: var(--fg2); border-radius: var(--radius);
+        padding: 10px 16px; font-size: 14px; cursor: pointer;
+        font-family: inherit; transition: all 0.2s;
+      }
+      .btn-ghost:hover { border-color: var(--accent); color: var(--fg); }
+
+      /* Entry input */
+      .entry-input-wrap { display: flex; flex-direction: column; gap: 10px; }
+      .entry-text {
+        background: var(--bg2); border: 1px solid var(--bg3);
+        border-radius: var(--radius); padding: 14px 16px;
+        color: var(--fg); font-size: 15px; width: 100%; outline: none;
+        resize: none; min-height: 60px; font-family: inherit;
+        transition: border-color 0.2s;
+      }
+      .entry-text:focus { border-color: var(--accent); }
+      .entry-text::placeholder { color: var(--fg3); }
+      .tag-row { display: flex; gap: 8px; flex-wrap: wrap; }
+      .tag-btn {
+        background: var(--bg2); border: 1px solid var(--bg3);
+        border-radius: 20px; padding: 6px 14px; font-size: 13px;
+        color: var(--fg2); cursor: pointer; transition: all 0.2s;
+        font-family: inherit;
+      }
+      .tag-btn:hover { border-color: var(--accent); color: var(--fg); }
+      .tag-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+      /* Stats row */
+      .stats { display: flex; gap: 12px; margin-bottom: 16px; }
+      .stat-card {
+        flex: 1; background: var(--bg2); border-radius: var(--radius);
+        padding: 14px; text-align: center;
+      }
+      .stat-val { font-size: 24px; font-weight: 700; color: var(--accent); }
+      .stat-label { font-size: 12px; color: var(--fg3); margin-top: 4px; }
+
+      /* Sections */
+      .section { margin-bottom: 20px; }
+      .section-title {
+        font-size: 14px; font-weight: 600; color: var(--fg2);
+        margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+      }
+
+      /* Entry list */
+      .entry-list { display: flex; flex-direction: column; gap: 8px; }
+      .entry-item {
+        background: var(--bg2); border-radius: var(--radius-sm);
+        padding: 12px 14px; display: flex; gap: 10px; align-items: flex-start;
+      }
+      .entry-tag {
+        font-size: 11px; background: rgba(129,140,248,0.15); color: var(--accent);
+        border-radius: 10px; padding: 2px 8px; white-space: nowrap; flex-shrink: 0;
+      }
+      .entry-content { font-size: 14px; color: var(--fg); line-height: 1.5; }
+      .entry-time { font-size: 11px; color: var(--fg3); margin-top: 4px; }
+
+      /* Insights */
+      .insight-card {
+        background: rgba(129,140,248,0.08); border: 1px solid rgba(129,140,248,0.15);
+        border-radius: var(--radius); padding: 16px; margin-bottom: 10px;
+      }
+      .insight-type {
+        display: inline-block; font-size: 11px; font-weight: 500;
+        background: rgba(129,140,248,0.15); color: var(--accent);
+        border-radius: 10px; padding: 2px 10px; margin-bottom: 8px;
+      }
+      .insight-text { font-size: 14px; line-height: 1.6; color: var(--fg); }
+
+      /* Empty state */
+      .empty { text-align: center; padding: 32px 16px; color: var(--fg3); font-size: 14px; }
+      .empty-icon { font-size: 32px; margin-bottom: 8px; }
+
+      /* Message */
+      .msg { font-size: 13px; margin-top: 8px; }
+      .msg-ok { color: var(--green); }
+      .msg-err { color: var(--red); }
+
+      /* Loading */
+      .loading { text-align: center; padding: 40px; color: var(--fg3); }
+
+      /* Header */
+      .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+      .header-title { font-size: 18px; font-weight: 600; }
+      .header-email { font-size: 12px; color: var(--fg3); }
+      .header-logout { font-size: 12px; color: var(--fg3); cursor: pointer; }
+      .header-logout:hover { color: var(--red); }
+    </style>
+  </head>
+  <body>
+    <div id="app" class="app">
+      <div class="loading">加载中...</div>
+    </div>
+
+    <script>
+    (function() {
+      const API = '';
+      let token = null;
+      let currentUser = null;
+
+      const app = document.getElementById('app');
+      const TAG_LABELS = { time: '⏰ 时间', money: '💸 消费', tool: '🔧 工具', habit: '🔄 习惯', other: '💬 其他' };
+
+      // ─── API helper ────────────────────────────────
+      const API_BASE = 'https://fast-escargot-5192.youware.pro';
+      async function api(path, opts = {}) {
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        const res = await fetch(API_BASE + path, { ...opts, headers: { ...headers, ...opts.headers } });
+        return res.json();
+      }
+
+      // ─── Auth ──────────────────────────────────────
+      function renderAuth() {
+        let isLogin = true;
+        function draw() {
+          app.innerHTML = `
+            <div class="auth">
+              <div>
+                <div class="auth-title">${isLogin ? '登录' : '注册'}</div>
+                <div class="auth-sub">生活摩擦探测器</div>
+              </div>
+              <form class="auth-form" id="auth-form">
+                <input type="email" id="auth-email" placeholder="邮箱" required />
+                <input type="password" id="auth-pwd" placeholder="密码 (至少6位)" required minlength="6" />
+                <button class="btn-primary" type="submit">${isLogin ? '登录' : '注册'}</button>
+              </form>
+              <div class="auth-toggle" id="auth-toggle">
+                ${isLogin ? '没有账号？点此注册' : '已有账号？点此登录'}
+              </div>
+              <div id="auth-msg" class="msg"></div>
+            </div>
+          `;
+          document.getElementById('auth-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value.trim();
+            const pwd = document.getElementById('auth-pwd').value;
+            const msgEl = document.getElementById('auth-msg');
+            msgEl.textContent = '';
+            const endpoint = isLogin ? '/api/public/login' : '/api/public/signup';
+            const data = await api(endpoint, {
+              method: 'POST',
+              body: JSON.stringify({ email, password: pwd })
+            });
+            if (data.ok) {
+              token = data.token;
+              localStorage.setItem('friction_token', token);
+              localStorage.setItem('friction_uid', data.userId);
+              currentUser = { id: data.userId, email };
+              renderMain();
+            } else {
+              msgEl.textContent = data.error || '失败';
+              msgEl.className = 'msg msg-err';
+            }
+          };
+          document.getElementById('auth-toggle').onclick = () => { isLogin = !isLogin; draw(); };
+        }
+        draw();
+      }
+
+      // ─── Main app ──────────────────────────────────
+      async function renderMain() {
+        app.innerHTML = '<div class="loading">加载中...</div>';
+
+        const [entriesRes, insightsRes] = await Promise.all([
+          api('/api/public/entries?limit=20'),
+          api('/api/public/insights')
+        ]);
+
+        const entries = entriesRes.ok ? entriesRes.entries : [];
+        const insightsList = insightsRes.ok ? insightsRes.insights : [];
+        const insightMsg = insightsRes.message || '';
+
+        const tagCounts = {};
+        entries.forEach(e => { const t = e.tag || 'other'; tagCounts[t] = (tagCounts[t] || 0) + 1; });
+        const topTag = Object.entries(tagCounts).sort((a, b) => b[1] - a[1])[0];
+
+        app.innerHTML = `
+          <div class="header">
+            <div>
+              <div class="header-title">🔍 摩擦探测器</div>
+              <div class="header-email">${currentUser.email}</div>
+            </div>
+            <div class="header-logout" id="logout">退出</div>
+          </div>
+
+          <div class="stats">
+            <div class="stat-card">
+              <div class="stat-val">${entries.length}</div>
+              <div class="stat-label">总记录</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-val">${topTag ? TAG_LABELS[topTag[0]]?.split(' ')[0] || '—' : '—'}</div>
+              <div class="stat-label">最多类型</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">✏️ 记录一条摩擦</div>
+            <div class="entry-input-wrap">
+              <textarea class="entry-text" id="entry-text" placeholder="今天什么事让你觉得「算了就这样吧」？" rows="2"></textarea>
+              <div class="tag-row" id="tag-row">
+                ${Object.entries(TAG_LABELS).map(([k, v]) =>
+                  `<button class="tag-btn${k === 'other' ? ' active' : ''}" data-tag="${k}">${v}</button>`
+                ).join('')}
+              </div>
+              <button class="btn-primary" id="submit-entry" style="width:auto; align-self:flex-end;">记录</button>
+            </div>
+            <div id="entry-msg" class="msg"></div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">💡 AI 洞察</div>
+            ${insightMsg && insightsList.length === 0 ? `<div class="empty">${insightMsg}</div>` : ''}
+            ${insightsList.length === 0 && !insightMsg ? '<div class="empty"><div class="empty-icon">📊</div>记录 3 条后就能看到洞察</div>' : ''}
+            ${insightsList.map(i => `
+              <div class="insight-card">
+                <span class="insight-type">${typeLabel(i.type)}</span>
+                <div class="insight-text">${i.content}</div>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="section">
+            <div class="section-title">📋 最近记录</div>
+            ${entries.length === 0 ? '<div class="empty"><div class="empty-icon">✨</div>还没有记录，开始你的第一条吧</div>' : ''}
+            <div class="entry-list">
+              ${entries.map(e => `
+                <div class="entry-item">
+                  <span class="entry-tag">${TAG_LABELS[e.tag] || '💬 其他'}</span>
+                  <div>
+                    <div class="entry-content">${escHtml(e.content)}</div>
+                    <div class="entry-time">${timeAgo(e.createdAt)}</div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+
+        // Tag selection
+        let selectedTag = 'other';
+        document.querySelectorAll('.tag-btn').forEach(btn => {
+          btn.onclick = () => {
+            document.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedTag = btn.dataset.tag;
+          };
+        });
+
+        // Submit entry
+        document.getElementById('submit-entry').onclick = async () => {
+          const text = document.getElementById('entry-text').value.trim();
+          const msgEl = document.getElementById('entry-msg');
+          if (!text) { msgEl.textContent = '写点什么吧'; msgEl.className = 'msg msg-err'; return; }
+          const data = await api('/api/public/entries', {
+            method: 'POST',
+            body: JSON.stringify({ content: text, tag: selectedTag })
+          });
+          if (data.ok) {
+            renderMain();
+          } else {
+            msgEl.textContent = data.error || '提交失败';
+            msgEl.className = 'msg msg-err';
+          }
+        };
+
+        // Logout
+        document.getElementById('logout').onclick = () => {
+          token = null;
+          currentUser = null;
+          localStorage.removeItem('friction_token');
+          localStorage.removeItem('friction_uid');
+          renderAuth();
+        };
+      }
+
+      // ─── Helpers ───────────────────────────────────
+      function typeLabel(type) {
+        const labels = { frequency: '📈 频率', pattern: '🔍 模式', suggestion: '💡 建议', streak: '🔥 连续' };
+        return labels[type] || type;
+      }
+      function escHtml(s) {
+        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      }
+      function timeAgo(ts) {
+        const diff = Date.now() - ts;
+        if (diff < 60000) return '刚刚';
+        if (diff < 3600000) return Math.floor(diff/60000) + ' 分钟前';
+        if (diff < 86400000) return Math.floor(diff/3600000) + ' 小时前';
+        return Math.floor(diff/86400000) + ' 天前';
+      }
+
+      // ─── Init ──────────────────────────────────────
+      token = localStorage.getItem('friction_token');
+      if (token) {
+        currentUser = { id: localStorage.getItem('friction_uid'), email: '' };
+        renderMain();
+      } else {
+        renderAuth();
+      }
+    })();
+    </script>
+  </body>
+</html>

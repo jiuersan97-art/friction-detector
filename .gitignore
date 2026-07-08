@@ -1,0 +1,6 @@
+node_modules/
+.edgespark/
+.env
+*.log
+dist/
+.DS_Store
