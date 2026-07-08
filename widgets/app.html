@@ -308,11 +308,15 @@
         });
 
         // Submit entry
-        document.getElementById('submit-entry').onclick = () => {
+        document.getElementById('submit-entry').onclick = async () => {
           const text = document.getElementById('entry-text').value.trim();
           const msgEl = document.getElementById('entry-msg');
           if (!text) { msgEl.textContent = '写点什么吧'; msgEl.className = 'msg msg-err'; return; }
           if (!state) { msgEl.textContent = '状态不可用'; msgEl.className = 'msg msg-err'; return; }
+
+          const btn = document.getElementById('submit-entry');
+          btn.disabled = true; btn.textContent = '分析中...';
+
           const entryId = 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
           state.set('entries.' + entryId, {
             userId: currentUserId,
@@ -320,10 +324,16 @@
             tag: selectedTag,
             createdAt: Date.now()
           });
-          // Store instant suggestion in state so it survives renderMain()
-          const suggestion = getInstantSuggestion(selectedTag, text);
-          state.set('lastSuggestion', { ...getInstantSuggestion(selectedTag, text), at: Date.now() });
+
+          // Try AI, fallback to rule engine
+          let suggestion = await aiAnalyze(text, selectedTag);
+          if (!suggestion) {
+            const fb = getInstantSuggestion(selectedTag, text);
+            suggestion = { why: fb.why, how: fb.how };
+          }
+          state.set('lastSuggestion', { ...suggestion, at: Date.now() });
           document.getElementById('entry-text').value = '';
+          btn.disabled = false; btn.textContent = '记录';
           renderMain();
         };
 
@@ -332,6 +342,51 @@
           currentUserId = null;
           renderAuth();
         };
+      }
+
+      // ─── AI Analysis via AgnesAI ───────────────────
+      const AGNES_KEY = 'sk-SQFmWrmk32XJWZlTUEPO6x63AsCRo4zIRzWmbGwu84jdKp3y';
+      const AGNES_URL = 'https://apihub.agnes-ai.com/v1/chat/completions';
+
+      async function aiAnalyze(content, tag) {
+        const tagLabels = { time: '时间浪费', money: '隐性消费', tool: '工具不顺手', habit: '不良习惯', other: '其他摩擦' };
+        const prompt = `你是一个生活摩擦分析助手。用户记录了一条日常摩擦：
+
+内容："${content}"
+类型：${tagLabels[tag] || '其他'}
+
+请用中文回复，格式如下（不要加其他内容）：
+
+📋 分析
+[一句话说明这个摩擦的根因]
+
+💡 具体方案
+[针对这个具体场景的1-2句可操作建议，要具体到步骤，不要泛泛而谈]`;
+
+        try {
+          const res = await fetch(AGNES_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AGNES_KEY },
+            body: JSON.stringify({
+              model: 'agnes-2.0-flash',
+              messages: [{ role: 'user', content: prompt }],
+              max_tokens: 200,
+              temperature: 0.7
+            })
+          });
+          const data = await res.json();
+          const text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+          // Parse the response
+          const whyMatch = text.match(/📋\s*分析\s*\n([\s\S]*?)(?=💡|$)/);
+          const howMatch = text.match(/💡\s*具体方案\s*\n([\s\S]*?)$/);
+          return {
+            why: whyMatch ? whyMatch[1].trim() : '这个摩擦反映了你的某个未被优化的日常环节',
+            how: howMatch ? howMatch[1].trim() : '试着记录更多细节，找到具体的改善点'
+          };
+        } catch (e) {
+          console.error('AI analyze failed:', e);
+          return null; // fallback to rule engine
+        }
       }
 
       // ─── Instant suggestion per entry ──────────────
