@@ -104,6 +104,7 @@ export const posts = sqliteTable(
     userId: text("user_id").notNull(),
     title: text().notNull(),
     content: text().notNull(),
+    postType: text("post_type").default("question").notNull(), // question | solution
     upvotes: integer("upvotes").default(0).notNull(),
     downvotes: integer("downvotes").default(0).notNull(),
     replyCount: integer("reply_count").default(0).notNull(),

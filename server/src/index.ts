@@ -412,14 +412,15 @@ app.post("/api/public/groups/:id/posts", async (c) => {
   const group = await db.select().from(groups).where(eq(groups.id, groupId)).then((r) => r[0]);
   if (!group) return c.json({ error: "group not found" }, 404);
 
-  const body = await c.req.json<{ title?: string; content?: string }>();
+  const body = await c.req.json<{ title?: string; content?: string; postType?: string }>();
   const title = body.title?.trim();
   const content = body.content?.trim();
   if (!title || !content) return c.json({ error: "title and content required" }, 400);
+  const postType = body.postType === "solution" ? "solution" : "question";
 
   const postId = nanoid();
   await db.insert(posts).values({
-    id: postId, groupId, userId: user.id, title, content,
+    id: postId, groupId, userId: user.id, title, content, postType,
     upvotes: 0, downvotes: 0, replyCount: 0, createdAt: Date.now(),
   });
   return c.json({ ok: true, id: postId });
@@ -552,6 +553,32 @@ app.get("/api/public/posts/:id/votes", async (c) => {
   }
 
   return c.json({ ok: true, upvotes: upCount, downvotes: downCount, score: upCount - downCount, myVote });
+});
+
+/** GET /api/public/users/me/posts — get current user's posts */
+app.get("/api/public/users/me/posts", async (c) => {
+  const token = extractToken(c);
+  if (!token) return c.json({ error: "auth required" }, 401);
+  const user = await getUserFromToken(token);
+  if (!user) return c.json({ error: "invalid session" }, 401);
+
+  const rows = await db.select().from(posts).where(eq(posts.userId, user.id)).orderBy(desc(posts.createdAt)).limit(20);
+  return c.json({ ok: true, posts: rows });
+});
+
+/** GET /api/public/users/me/groups — get current user's joined groups */
+app.get("/api/public/users/me/groups", async (c) => {
+  const token = extractToken(c);
+  if (!token) return c.json({ error: "auth required" }, 401);
+  const user = await getUserFromToken(token);
+  if (!user) return c.json({ error: "invalid session" }, 401);
+
+  const pref = await db.select().from(userPreferences).where(eq(userPreferences.userId, user.id)).then((r) => r[0]);
+  const joinedIds = pref ? JSON.parse(pref.frictionTypes || "[]") : [];
+  if (joinedIds.length === 0) return c.json({ ok: true, groups: [] });
+
+  const joinedGroups = await db.select().from(groups).where(sql`${groups.id} IN ${joinedIds}`);
+  return c.json({ ok: true, groups: joinedGroups });
 });
 
 /** POST /api/public/seed-groups — seed default groups (dev only) */

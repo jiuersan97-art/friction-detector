@@ -1,0 +1,1 @@
+ALTER TABLE `posts` ADD `post_type` text DEFAULT 'question' NOT NULL;
