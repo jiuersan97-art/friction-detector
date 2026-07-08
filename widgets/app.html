@@ -307,7 +307,13 @@
             tag: selectedTag,
             createdAt: Date.now()
           });
-          renderMain();
+          // Show instant suggestion
+          const suggestion = getInstantSuggestion(selectedTag, text);
+          msgEl.innerHTML = '<div style="background:rgba(129,140,248,0.1); border:1px solid rgba(129,140,248,0.2); border-radius:8px; padding:10px 14px; margin-top:8px;"><span style="font-size:12px; color:var(--accent);">💡 试试：</span> <span style="font-size:13px; color:var(--fg2);">' + suggestion + '</span></div>';
+          msgEl.className = 'msg msg-ok';
+          document.getElementById('entry-text').value = '';
+          // Refresh list after short delay (let state propagate)
+          setTimeout(() => renderMain(), 300);
         };
 
         // Logout
@@ -317,7 +323,35 @@
         };
       }
 
-      // ─── Client-side rule engine ───────────────────
+      // ─── Instant suggestion per entry ──────────────
+      function getInstantSuggestion(tag, content) {
+        const c = content.toLowerCase();
+        // Keyword-based suggestions
+        const keywordMap = [
+          { keys: ['通知','提醒','弹窗','推送'], msg: '花 2 分钟关掉不重要的通知，世界会安静很多。' },
+          { keys: ['找','翻','搜索','找不到'], msg: '给文件/笔记建一个简单的分类规则，5 秒标记省 5 分钟查找。' },
+          { keys: ['纠结','选择','决定','不知道'], msg: '给这类决策设一个默认选项，减少"选哪个"的内耗。' },
+          { keys: ['忘','忘记','忘了'], msg: '设一个定时提醒或固定流程，别让记忆力背锅。' },
+          { keys: ['重复','每次都','又'], msg: '这种重复操作值得花 10 分钟找一个一劳永逸的解法。' },
+          { keys: ['贵','花钱','买','消费','订阅'], msg: '记一笔"冲动消费"，一个月后回看还觉得值得吗？' },
+          { keys: ['卡','慢','崩溃','bug'], msg: '同类工具对比一下，可能有更好的选择。' },
+          { keys: ['绕','多一步','多此一举'], msg: '这个多余的步骤能自动化或跳过吗？' },
+        ];
+        for (const rule of keywordMap) {
+          if (rule.keys.some(k => c.includes(k))) return rule.msg;
+        }
+        // Fallback by tag
+        const tagSuggestions = {
+          time: '这种重复耗时的事，值得花 10 分钟找一个一劳永逸的解法。',
+          money: '记一笔"冲动消费"，一个月后回看还觉得值得吗？',
+          tool: '同类工具对比一下，可能有更好的选择。',
+          habit: '选一个最小的改变，连续 7 天试试，观察变化。',
+          other: '下次遇到「算了」的瞬间，花 5 秒写下：理想的做法是什么？'
+        };
+        return tagSuggestions[tag] || tagSuggestions.other;
+      }
+
+      // ─── Client-side rule engine (batch) ───────────
       function computeInsights(entries) {
         if (entries.length < 3) return [];
         const result = [];
