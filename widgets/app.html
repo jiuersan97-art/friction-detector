@@ -219,14 +219,20 @@
       async function renderMain() {
         app.innerHTML = '<div class="loading">加载中...</div>';
 
-        const [entriesRes, insightsRes] = await Promise.all([
-          api('/api/public/entries?limit=20'),
-          api('/api/public/insights')
-        ]);
-
-        const entries = entriesRes.ok ? entriesRes.entries : [];
-        const insightsList = insightsRes.ok ? insightsRes.insights : [];
-        const insightMsg = insightsRes.message || '';
+        let entries = [], insightsList = [], insightMsg = '';
+        try {
+          const [entriesRes, insightsRes] = await Promise.all([
+            api('/api/public/entries?limit=20').catch(() => ({ ok: false, entries: [] })),
+            api('/api/public/insights').catch(() => ({ ok: false, insights: [], message: '' }))
+          ]);
+          entries = entriesRes.ok ? (entriesRes.entries || []) : [];
+          insightsList = insightsRes.ok ? (insightsRes.insights || []) : [];
+          insightMsg = insightsRes.message || '';
+        } catch (e) {
+          // API unreachable — show auth screen
+          renderAuth();
+          return;
+        }
 
         const tagCounts = {};
         entries.forEach(e => { const t = e.tag || 'other'; tagCounts[t] = (tagCounts[t] || 0) + 1; });
@@ -352,7 +358,7 @@
       token = localStorage.getItem('friction_token');
       if (token) {
         currentUser = { id: localStorage.getItem('friction_uid'), email: '' };
-        renderMain();
+        renderMain().catch(() => renderAuth());
       } else {
         renderAuth();
       }
