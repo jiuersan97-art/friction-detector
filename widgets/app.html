@@ -254,7 +254,17 @@
             <div id="entry-msg" class="msg">
               ${(() => {
                 const s = getState().lastSuggestion;
-                if (s && s.at && (Date.now() - s.at < 120000)) {
+                if (!s || !s.at) return '';
+                if (s.loading) {
+                  return `<div style="background:rgba(129,140,248,0.08); border:1px solid rgba(129,140,248,0.15); border-radius:10px; padding:14px; margin-top:10px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <div style="width:16px; height:16px; border:2px solid rgba(129,140,248,0.3); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+                      <span style="font-size:13px; color:var(--accent);">AI 正在分析你的记录...</span>
+                    </div>
+                  </div>
+                  <style>@keyframes spin { to { transform: rotate(360deg); } }</style>`;
+                }
+                if (Date.now() - s.at < 120000) {
                   return `<div style="background:rgba(129,140,248,0.08); border:1px solid rgba(129,140,248,0.15); border-radius:10px; padding:14px; margin-top:10px;">
                     <div style="font-size:12px; color:var(--accent); font-weight:500; margin-bottom:6px;">📋 分析</div>
                     <div style="font-size:13px; color:var(--fg2); margin-bottom:10px;">${escHtml(s.why)}</div>
@@ -315,7 +325,8 @@
           if (!state) { msgEl.textContent = '状态不可用'; msgEl.className = 'msg msg-err'; return; }
 
           const btn = document.getElementById('submit-entry');
-          btn.disabled = true; btn.textContent = '分析中...';
+          const origText = btn.textContent;
+          btn.disabled = true; btn.textContent = '🤖 分析中...'; btn.style.opacity = '0.7';
 
           const entryId = 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
           state.set('entries.' + entryId, {
@@ -325,15 +336,19 @@
             createdAt: Date.now()
           });
 
+          // Show loading state immediately
+          state.set('lastSuggestion', { why: 'AI 正在分析你的记录...', how: '请稍候', at: Date.now(), loading: true });
+          document.getElementById('entry-text').value = '';
+          renderMain();
+
           // Try AI, fallback to rule engine
           let suggestion = await aiAnalyze(text, selectedTag);
           if (!suggestion) {
             const fb = getInstantSuggestion(selectedTag, text);
             suggestion = { why: fb.why, how: fb.how };
           }
-          state.set('lastSuggestion', { ...suggestion, at: Date.now() });
-          document.getElementById('entry-text').value = '';
-          btn.disabled = false; btn.textContent = '记录';
+          state.set('lastSuggestion', { ...suggestion, at: Date.now(), loading: false });
+          btn.disabled = false; btn.textContent = origText; btn.style.opacity = '1';
           renderMain();
         };
 
