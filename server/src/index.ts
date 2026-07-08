@@ -4,9 +4,15 @@ import { users, sessions, frictionEntries, insights, groups, posts, replies, vot
 import { eq, desc, asc, sql, and, count as drizzleCount } from "drizzle-orm";
 import { installBloomeBridge } from "./bloome-bridge";
 import { nanoid } from "./utils";
+import { COMMUNITY_HTML } from "./community-page";
 
 const app = new Hono();
 installBloomeBridge(app);
+
+// Serve community widget at /api/public/app (direct access without Bloome)
+app.get("/api/public/app", (c) => {
+  return c.html(COMMUNITY_HTML);
+});
 
 // ─── Auth ────────────────────────────────────────────
 
