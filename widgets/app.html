@@ -7,26 +7,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" />
     <style>
       :root {
         --bg: #0f172a; --bg2: #1e293b; --bg3: #334155;
         --fg: #f1f5f9; --fg2: #94a3b8; --fg3: #64748b;
         --accent: #818cf8; --accent2: #6366f1;
-        --green: #4ade80; --green-bg: rgba(34,197,94,0.1);
-        --red: #f87171;
+        --green: #4ade80; --red: #f87171;
         --radius: 12px; --radius-sm: 8px;
       }
       * { box-sizing: border-box; margin: 0; padding: 0; }
-      body {
-        font-family: 'Sora', sans-serif;
-        background: var(--bg); color: var(--fg);
-        -webkit-font-smoothing: antialiased;
-        min-height: 100vh;
-      }
+      body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--fg); -webkit-font-smoothing: antialiased; }
       .app { max-width: 480px; margin: 0 auto; padding: 16px; }
 
-      /* Auth screen */
       .auth { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; gap: 24px; }
       .auth-title { font-size: 24px; font-weight: 700; text-align: center; }
       .auth-sub { font-size: 14px; color: var(--fg2); text-align: center; }
@@ -34,72 +26,47 @@
       .auth-toggle { font-size: 13px; color: var(--fg3); text-align: center; cursor: pointer; }
       .auth-toggle:hover { color: var(--accent); }
 
-      /* Inputs */
       input[type="email"], input[type="password"], input[type="text"] {
-        background: var(--bg2); border: 1px solid var(--bg3);
-        border-radius: var(--radius); padding: 12px 16px;
-        color: var(--fg); font-size: 15px; width: 100%; outline: none;
+        background: var(--bg2); border: 1px solid var(--bg3); border-radius: var(--radius);
+        padding: 12px 16px; color: var(--fg); font-size: 15px; width: 100%; outline: none;
         transition: border-color 0.2s; font-family: inherit;
       }
       input:focus { border-color: var(--accent); }
       input::placeholder { color: var(--fg3); }
 
-      /* Buttons */
       .btn-primary {
         background: linear-gradient(135deg, var(--accent2), var(--accent));
         color: white; border: none; border-radius: var(--radius);
         padding: 12px 24px; font-size: 15px; font-weight: 600;
-        cursor: pointer; width: 100%; font-family: inherit;
-        transition: opacity 0.2s;
+        cursor: pointer; width: 100%; font-family: inherit; transition: opacity 0.2s;
       }
       .btn-primary:hover { opacity: 0.9; }
       .btn-primary:disabled { opacity: 0.5; cursor: default; }
-      .btn-ghost {
-        background: var(--bg2); border: 1px solid var(--bg3);
-        color: var(--fg2); border-radius: var(--radius);
-        padding: 10px 16px; font-size: 14px; cursor: pointer;
-        font-family: inherit; transition: all 0.2s;
-      }
-      .btn-ghost:hover { border-color: var(--accent); color: var(--fg); }
 
-      /* Entry input */
-      .entry-input-wrap { display: flex; flex-direction: column; gap: 10px; }
       .entry-text {
-        background: var(--bg2); border: 1px solid var(--bg3);
-        border-radius: var(--radius); padding: 14px 16px;
-        color: var(--fg); font-size: 15px; width: 100%; outline: none;
-        resize: none; min-height: 60px; font-family: inherit;
-        transition: border-color 0.2s;
+        background: var(--bg2); border: 1px solid var(--bg3); border-radius: var(--radius);
+        padding: 14px 16px; color: var(--fg); font-size: 15px; width: 100%; outline: none;
+        resize: none; min-height: 60px; font-family: inherit; transition: border-color 0.2s;
       }
       .entry-text:focus { border-color: var(--accent); }
       .entry-text::placeholder { color: var(--fg3); }
       .tag-row { display: flex; gap: 8px; flex-wrap: wrap; }
       .tag-btn {
-        background: var(--bg2); border: 1px solid var(--bg3);
-        border-radius: 20px; padding: 6px 14px; font-size: 13px;
-        color: var(--fg2); cursor: pointer; transition: all 0.2s;
-        font-family: inherit;
+        background: var(--bg2); border: 1px solid var(--bg3); border-radius: 20px;
+        padding: 6px 14px; font-size: 13px; color: var(--fg2); cursor: pointer;
+        transition: all 0.2s; font-family: inherit;
       }
       .tag-btn:hover { border-color: var(--accent); color: var(--fg); }
       .tag-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
 
-      /* Stats row */
       .stats { display: flex; gap: 12px; margin-bottom: 16px; }
-      .stat-card {
-        flex: 1; background: var(--bg2); border-radius: var(--radius);
-        padding: 14px; text-align: center;
-      }
+      .stat-card { flex: 1; background: var(--bg2); border-radius: var(--radius); padding: 14px; text-align: center; }
       .stat-val { font-size: 24px; font-weight: 700; color: var(--accent); }
       .stat-label { font-size: 12px; color: var(--fg3); margin-top: 4px; }
 
-      /* Sections */
       .section { margin-bottom: 20px; }
-      .section-title {
-        font-size: 14px; font-weight: 600; color: var(--fg2);
-        margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
-      }
+      .section-title { font-size: 14px; font-weight: 600; color: var(--fg2); margin-bottom: 10px; }
 
-      /* Entry list */
       .entry-list { display: flex; flex-direction: column; gap: 8px; }
       .entry-item {
         background: var(--bg2); border-radius: var(--radius-sm);
@@ -112,7 +79,6 @@
       .entry-content { font-size: 14px; color: var(--fg); line-height: 1.5; }
       .entry-time { font-size: 11px; color: var(--fg3); margin-top: 4px; }
 
-      /* Insights */
       .insight-card {
         background: rgba(129,140,248,0.08); border: 1px solid rgba(129,140,248,0.15);
         border-radius: var(--radius); padding: 16px; margin-bottom: 10px;
@@ -124,59 +90,38 @@
       }
       .insight-text { font-size: 14px; line-height: 1.6; color: var(--fg); }
 
-      /* Empty state */
       .empty { text-align: center; padding: 32px 16px; color: var(--fg3); font-size: 14px; }
       .empty-icon { font-size: 32px; margin-bottom: 8px; }
-
-      /* Message */
       .msg { font-size: 13px; margin-top: 8px; }
       .msg-ok { color: var(--green); }
       .msg-err { color: var(--red); }
-
-      /* Loading */
-      .loading { text-align: center; padding: 40px; color: var(--fg3); }
-
-      /* Header */
       .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
       .header-title { font-size: 18px; font-weight: 600; }
       .header-email { font-size: 12px; color: var(--fg3); }
       .header-logout { font-size: 12px; color: var(--fg3); cursor: pointer; }
       .header-logout:hover { color: var(--red); }
+      .entry-input-wrap { display: flex; flex-direction: column; gap: 10px; }
     </style>
   </head>
   <body>
     <div id="app" class="app">
-      <div class="loading">加载中...</div>
+      <div class="auth">
+        <div class="auth-title">🔍 摩擦探测器</div>
+        <div class="auth-sub">发现你习惯了的痛点</div>
+      </div>
     </div>
-
     <script>
     (function() {
-      const API = '';
-      let token = null;
-      let currentUser = null;
-
-      const app = document.getElementById('app');
       const TAG_LABELS = { time: '⏰ 时间', money: '💸 消费', tool: '🔧 工具', habit: '🔄 习惯', other: '💬 其他' };
+      const state = window.ResonWidget && ResonWidget.state;
+      const app = document.getElementById('app');
+      let currentUserId = null;
 
-      // ─── API helper ────────────────────────────────
-      // Use EdgeSpark bridge when available (avoids iframe CORS/CSP issues)
-      // Fallback to direct fetch for public share links
-      const hasEdgeSpark = !!(window.ResonWidget && ResonWidget.edgespark);
-      async function api(path, opts = {}) {
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = 'Bearer ' + token;
-        try {
-          if (hasEdgeSpark) {
-            const res = await ResonWidget.edgespark.fetch(path, { ...opts, headers: { ...headers, ...opts.headers } });
-            return await res.json();
-          }
-          const res = await fetch('https://fast-escargot-5192.youware.pro' + path, { ...opts, headers: { ...headers, ...opts.headers } });
-          return await res.json();
-        } catch (e) {
-          console.error('API error:', e);
-          return { ok: false, error: e.message || 'network error' };
-        }
-      }
+      // ─── State helpers ─────────────────────────────
+      function getState() { return state ? (state.get() || {}) : {}; }
+      function getUsers() { return getState().users || {}; }
+      function getEntries() { return getState().entries || {}; }
+      function getInsights() { return getState().insights || {}; }
 
       // ─── Auth ──────────────────────────────────────
       function renderAuth() {
@@ -201,24 +146,53 @@
           `;
           document.getElementById('auth-form').onsubmit = async (e) => {
             e.preventDefault();
-            const email = document.getElementById('auth-email').value.trim();
+            const email = document.getElementById('auth-email').value.trim().toLowerCase();
             const pwd = document.getElementById('auth-pwd').value;
             const msgEl = document.getElementById('auth-msg');
             msgEl.textContent = '';
-            const endpoint = isLogin ? '/api/public/login' : '/api/public/signup';
-            const data = await api(endpoint, {
-              method: 'POST',
-              body: JSON.stringify({ email, password: pwd })
-            });
-            if (data.ok) {
-              token = data.token;
-              localStorage.setItem('friction_token', token);
-              localStorage.setItem('friction_uid', data.userId);
-              currentUser = { id: data.userId, email };
+
+            if (!state) {
+              msgEl.textContent = '请在 Bloome 中打开此页面';
+              msgEl.className = 'msg msg-err';
+              return;
+            }
+
+            const users = getUsers();
+
+            if (isLogin) {
+              // Find user by email
+              const found = Object.entries(users).find(([_, u]) => u.email === email);
+              if (!found) {
+                msgEl.textContent = '账号不存在';
+                msgEl.className = 'msg msg-err';
+                return;
+              }
+              const [uid, user] = found;
+              if (user.password !== pwd) {
+                msgEl.textContent = '密码错误';
+                msgEl.className = 'msg msg-err';
+                return;
+              }
+              currentUserId = uid;
               renderMain();
             } else {
-              msgEl.textContent = data.error || '失败';
-              msgEl.className = 'msg msg-err';
+              // Check if email exists
+              const exists = Object.values(users).some(u => u.email === email);
+              if (exists) {
+                msgEl.textContent = '邮箱已注册';
+                msgEl.className = 'msg msg-err';
+                return;
+              }
+              if (pwd.length < 6) {
+                msgEl.textContent = '密码至少6位';
+                msgEl.className = 'msg msg-err';
+                return;
+              }
+              // Create user
+              const uid = 'u_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+              state.set('users.' + uid, { email, password: pwd, createdAt: Date.now() });
+              currentUserId = uid;
+              renderMain();
             }
           };
           document.getElementById('auth-toggle').onclick = () => { isLogin = !isLogin; draw(); };
@@ -227,44 +201,41 @@
       }
 
       // ─── Main app ──────────────────────────────────
-      async function renderMain() {
-        app.innerHTML = '<div class="loading">加载中...</div>';
+      function renderMain() {
+        const entries = getEntries();
+        const userEntries = Object.entries(entries)
+          .filter(([_, e]) => e.userId === currentUserId)
+          .sort((a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0))
+          .slice(0, 20);
 
-        let entries = [], insightsList = [], insightMsg = '';
-        try {
-          const [entriesRes, insightsRes] = await Promise.all([
-            api('/api/public/entries?limit=20').catch(() => ({ ok: false, entries: [] })),
-            api('/api/public/insights').catch(() => ({ ok: false, insights: [], message: '' }))
-          ]);
-          entries = entriesRes.ok ? (entriesRes.entries || []) : [];
-          insightsList = insightsRes.ok ? (insightsRes.insights || []) : [];
-          insightMsg = insightsRes.message || '';
-        } catch (e) {
-          // API unreachable — show auth screen
-          renderAuth();
-          return;
-        }
+        const users = getUsers();
+        const currentUser = users[currentUserId] || {};
 
+        // Compute insights on the fly
+        const myEntries = userEntries.map(([_, e]) => e);
+        const insights = computeInsights(myEntries);
+
+        // Stats
         const tagCounts = {};
-        entries.forEach(e => { const t = e.tag || 'other'; tagCounts[t] = (tagCounts[t] || 0) + 1; });
+        myEntries.forEach(e => { const t = e.tag || 'other'; tagCounts[t] = (tagCounts[t] || 0) + 1; });
         const topTag = Object.entries(tagCounts).sort((a, b) => b[1] - a[1])[0];
 
         app.innerHTML = `
           <div class="header">
             <div>
               <div class="header-title">🔍 摩擦探测器</div>
-              <div class="header-email">${currentUser.email}</div>
+              <div class="header-email">${escHtml(currentUser.email || '')}</div>
             </div>
             <div class="header-logout" id="logout">退出</div>
           </div>
 
           <div class="stats">
             <div class="stat-card">
-              <div class="stat-val">${entries.length}</div>
+              <div class="stat-val">${myEntries.length}</div>
               <div class="stat-label">总记录</div>
             </div>
             <div class="stat-card">
-              <div class="stat-val">${topTag ? TAG_LABELS[topTag[0]]?.split(' ')[0] || '—' : '—'}</div>
+              <div class="stat-val">${topTag ? TAG_LABELS[topTag[0]].split(' ')[0] : '—'}</div>
               <div class="stat-label">最多类型</div>
             </div>
           </div>
@@ -285,30 +256,31 @@
 
           <div class="section">
             <div class="section-title">💡 AI 洞察</div>
-            ${insightMsg && insightsList.length === 0 ? `<div class="empty">${insightMsg}</div>` : ''}
-            ${insightsList.length === 0 && !insightMsg ? '<div class="empty"><div class="empty-icon">📊</div>记录 3 条后就能看到洞察</div>' : ''}
-            ${insightsList.map(i => `
-              <div class="insight-card">
-                <span class="insight-type">${typeLabel(i.type)}</span>
-                <div class="insight-text">${i.content}</div>
-              </div>
-            `).join('')}
+            ${myEntries.length < 3
+              ? `<div class="empty"><div class="empty-icon">📊</div>再记录 ${3 - myEntries.length} 条就能看到洞察</div>`
+              : insights.map(i => `
+                <div class="insight-card">
+                  <span class="insight-type">${typeLabel(i.type)}</span>
+                  <div class="insight-text">${i.content}</div>
+                </div>
+              `).join('')}
           </div>
 
           <div class="section">
             <div class="section-title">📋 最近记录</div>
-            ${entries.length === 0 ? '<div class="empty"><div class="empty-icon">✨</div>还没有记录，开始你的第一条吧</div>' : ''}
-            <div class="entry-list">
-              ${entries.map(e => `
-                <div class="entry-item">
-                  <span class="entry-tag">${TAG_LABELS[e.tag] || '💬 其他'}</span>
-                  <div>
-                    <div class="entry-content">${escHtml(e.content)}</div>
-                    <div class="entry-time">${timeAgo(e.createdAt)}</div>
+            ${userEntries.length === 0
+              ? '<div class="empty"><div class="empty-icon">✨</div>还没有记录，开始你的第一条吧</div>'
+              : `<div class="entry-list">
+                ${userEntries.map(([_, e]) => `
+                  <div class="entry-item">
+                    <span class="entry-tag">${TAG_LABELS[e.tag] || '💬 其他'}</span>
+                    <div>
+                      <div class="entry-content">${escHtml(e.content)}</div>
+                      <div class="entry-time">${timeAgo(e.createdAt)}</div>
+                    </div>
                   </div>
-                </div>
-              `).join('')}
-            </div>
+                `).join('')}
+              </div>`}
           </div>
         `;
 
@@ -323,56 +295,96 @@
         });
 
         // Submit entry
-        document.getElementById('submit-entry').onclick = async () => {
+        document.getElementById('submit-entry').onclick = () => {
           const text = document.getElementById('entry-text').value.trim();
           const msgEl = document.getElementById('entry-msg');
           if (!text) { msgEl.textContent = '写点什么吧'; msgEl.className = 'msg msg-err'; return; }
-          const data = await api('/api/public/entries', {
-            method: 'POST',
-            body: JSON.stringify({ content: text, tag: selectedTag })
+          if (!state) { msgEl.textContent = '状态不可用'; msgEl.className = 'msg msg-err'; return; }
+          const entryId = 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+          state.set('entries.' + entryId, {
+            userId: currentUserId,
+            content: text,
+            tag: selectedTag,
+            createdAt: Date.now()
           });
-          if (data.ok) {
-            renderMain();
-          } else {
-            msgEl.textContent = data.error || '提交失败';
-            msgEl.className = 'msg msg-err';
-          }
+          renderMain();
         };
 
         // Logout
         document.getElementById('logout').onclick = () => {
-          token = null;
-          currentUser = null;
-          localStorage.removeItem('friction_token');
-          localStorage.removeItem('friction_uid');
+          currentUserId = null;
           renderAuth();
         };
       }
 
+      // ─── Client-side rule engine ───────────────────
+      function computeInsights(entries) {
+        if (entries.length < 3) return [];
+        const result = [];
+
+        // Frequency
+        const span = entries.length > 1
+          ? (entries[0].createdAt - entries[entries.length - 1].createdAt) / (24*60*60*1000)
+          : 1;
+        const pace = (entries.length / Math.max(span, 1)).toFixed(1);
+        result.push({ type: 'frequency', content: `你已经记录了 ${entries.length} 条摩擦，平均每天 ${pace} 条。` });
+
+        // Pattern
+        const tagCounts = {};
+        entries.forEach(e => { const t = e.tag || 'other'; tagCounts[t] = (tagCounts[t] || 0) + 1; });
+        const sorted = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
+        if (sorted.length > 0) {
+          const labels = { time: '时间浪费', money: '隐性消费', tool: '工具不顺手', habit: '不良习惯', other: '其他摩擦' };
+          const [top, cnt] = sorted[0];
+          const pct = Math.round((cnt / entries.length) * 100);
+          result.push({ type: 'pattern', content: `你 ${pct}% 的摩擦跟「${labels[top] || top}」有关。` });
+        }
+
+        // Suggestion
+        if (sorted.length > 0) {
+          const suggestions = {
+            time: '试试番茄工作法或时间块——把「算了」的时间段切出来，专门处理。',
+            money: '记一周账，重点标记「顺手买」和「忘了关」的订阅。',
+            tool: '花 10 分钟搜一下你最常用的工具有没有更快的替代方案。',
+            habit: '选一个最小的「算了」场景，连续 7 天用不同方式应对，观察变化。',
+            other: '下次遇到「算了」的瞬间，花 5 秒写下：如果不受限，我理想的做法是什么？'
+          };
+          result.push({ type: 'suggestion', content: suggestions[sorted[0][0]] || suggestions.other });
+        }
+
+        // Streak
+        const daySet = new Set(entries.map(e => new Date(e.createdAt).toISOString().slice(0, 10)));
+        let streak = 0;
+        const today = new Date();
+        for (let i = 0; i < 30; i++) {
+          const d = new Date(today); d.setDate(d.getDate() - i);
+          if (daySet.has(d.toISOString().slice(0, 10))) streak++; else break;
+        }
+        if (streak >= 3) result.push({ type: 'streak', content: `连续 ${streak} 天记录，坚持得很好。` });
+
+        return result;
+      }
+
       // ─── Helpers ───────────────────────────────────
-      function typeLabel(type) {
-        const labels = { frequency: '📈 频率', pattern: '🔍 模式', suggestion: '💡 建议', streak: '🔥 连续' };
-        return labels[type] || type;
+      function typeLabel(t) {
+        return { frequency: '📈 频率', pattern: '🔍 模式', suggestion: '💡 建议', streak: '🔥 连续' }[t] || t;
       }
-      function escHtml(s) {
-        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      }
+      function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
       function timeAgo(ts) {
-        const diff = Date.now() - ts;
-        if (diff < 60000) return '刚刚';
-        if (diff < 3600000) return Math.floor(diff/60000) + ' 分钟前';
-        if (diff < 86400000) return Math.floor(diff/3600000) + ' 小时前';
-        return Math.floor(diff/86400000) + ' 天前';
+        const d = Date.now() - ts;
+        if (d < 60000) return '刚刚';
+        if (d < 3600000) return Math.floor(d/60000) + ' 分钟前';
+        if (d < 86400000) return Math.floor(d/3600000) + ' 小时前';
+        return Math.floor(d/86400000) + ' 天前';
       }
 
       // ─── Init ──────────────────────────────────────
-      token = localStorage.getItem('friction_token');
-      if (token) {
-        currentUser = { id: localStorage.getItem('friction_uid'), email: '' };
-        renderMain().catch(() => renderAuth());
-      } else {
-        renderAuth();
+      if (state) {
+        state.on('change', () => {
+          if (currentUserId) renderMain();
+        });
       }
+      renderAuth();
     })();
     </script>
   </body>
