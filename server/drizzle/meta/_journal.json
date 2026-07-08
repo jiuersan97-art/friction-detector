@@ -15,6 +15,13 @@
       "when": 1783511203612,
       "tag": "0001_fancy_infant_terrible",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1783515421088,
+      "tag": "0002_cynical_killmonger",
+      "breakpoints": true
     }
   ]
 }

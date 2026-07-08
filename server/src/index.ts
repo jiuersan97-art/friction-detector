@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { db } from "edgespark";
-import { users, sessions, frictionEntries, insights } from "./defs/db_schema";
-import { eq, desc, asc } from "drizzle-orm";
+import { users, sessions, frictionEntries, insights, groups, posts, replies, votes, userPreferences } from "./defs/db_schema";
+import { eq, desc, asc, sql, and, count as drizzleCount } from "drizzle-orm";
 import { installBloomeBridge } from "./bloome-bridge";
 import { nanoid } from "./utils";
 
@@ -328,5 +328,252 @@ async function verifyPassword(
     .join("");
   return hex === expectedHash;
 }
+
+// ─── Community ───────────────────────────────────────
+
+/** GET /api/public/groups — list all groups */
+app.get("/api/public/groups", async (c) => {
+  const rows = await db.select().from(groups).orderBy(desc(groups.memberCount));
+  return c.json({ ok: true, groups: rows });
+});
+
+/** GET /api/public/groups/:id — get group detail */
+app.get("/api/public/groups/:id", async (c) => {
+  const id = c.req.param("id");
+  const group = await db.select().from(groups).where(eq(groups.id, id)).then((r) => r[0]);
+  if (!group) return c.json({ error: "group not found" }, 404);
+  return c.json({ ok: true, group });
+});
+
+/** POST /api/public/groups/:id/join — join or leave a group (toggle) */
+app.post("/api/public/groups/:id/join", async (c) => {
+  const token = extractToken(c);
+  if (!token) return c.json({ error: "auth required" }, 401);
+  const user = await getUserFromToken(token);
+  if (!user) return c.json({ error: "invalid session" }, 401);
+
+  const groupId = c.req.param("id");
+  const group = await db.select().from(groups).where(eq(groups.id, groupId)).then((r) => r[0]);
+  if (!group) return c.json({ error: "group not found" }, 404);
+
+  // Check membership via user_preferences (friction_types stores joined groups)
+  const pref = await db.select().from(userPreferences).where(eq(userPreferences.userId, user.id)).then((r) => r[0]);
+  const joined = pref ? JSON.parse(pref.frictionTypes || "[]") : [];
+  const isMember = joined.includes(groupId);
+
+  if (isMember) {
+    // Leave
+    const next = joined.filter((g: string) => g !== groupId);
+    await db.update(userPreferences).set({ frictionTypes: JSON.stringify(next) }).where(eq(userPreferences.userId, user.id));
+    await db.update(groups).set({ memberCount: Math.max(0, group.memberCount - 1) }).where(eq(groups.id, groupId));
+    return c.json({ ok: true, joined: false, memberCount: Math.max(0, group.memberCount - 1) });
+  } else {
+    // Join
+    const next = [...joined, groupId];
+    if (pref) {
+      await db.update(userPreferences).set({ frictionTypes: JSON.stringify(next) }).where(eq(userPreferences.userId, user.id));
+    } else {
+      await db.insert(userPreferences).values({ userId: user.id, frictionTypes: JSON.stringify(next), createdAt: Date.now() });
+    }
+    await db.update(groups).set({ memberCount: group.memberCount + 1 }).where(eq(groups.id, groupId));
+    return c.json({ ok: true, joined: true, memberCount: group.memberCount + 1 });
+  }
+});
+
+/** GET /api/public/groups/:id/membership — check if current user joined */
+app.get("/api/public/groups/:id/membership", async (c) => {
+  const token = extractToken(c);
+  if (!token) return c.json({ ok: true, joined: false });
+  const user = await getUserFromToken(token);
+  if (!user) return c.json({ ok: true, joined: false });
+
+  const groupId = c.req.param("id");
+  const pref = await db.select().from(userPreferences).where(eq(userPreferences.userId, user.id)).then((r) => r[0]);
+  const joined = pref ? JSON.parse(pref.frictionTypes || "[]") : [];
+  return c.json({ ok: true, joined: joined.includes(groupId) });
+});
+
+/** GET /api/public/groups/:id/posts — list posts in a group */
+app.get("/api/public/groups/:id/posts", async (c) => {
+  const groupId = c.req.param("id");
+  const limit = Math.min(parseInt(c.req.query("limit") || "20"), 50);
+  const rows = await db.select().from(posts).where(eq(posts.groupId, groupId)).orderBy(desc(posts.createdAt)).limit(limit);
+  return c.json({ ok: true, posts: rows });
+});
+
+/** POST /api/public/groups/:id/posts — create a post */
+app.post("/api/public/groups/:id/posts", async (c) => {
+  const token = extractToken(c);
+  if (!token) return c.json({ error: "auth required" }, 401);
+  const user = await getUserFromToken(token);
+  if (!user) return c.json({ error: "invalid session" }, 401);
+
+  const groupId = c.req.param("id");
+  const group = await db.select().from(groups).where(eq(groups.id, groupId)).then((r) => r[0]);
+  if (!group) return c.json({ error: "group not found" }, 404);
+
+  const body = await c.req.json<{ title?: string; content?: string }>();
+  const title = body.title?.trim();
+  const content = body.content?.trim();
+  if (!title || !content) return c.json({ error: "title and content required" }, 400);
+
+  const postId = nanoid();
+  await db.insert(posts).values({
+    id: postId, groupId, userId: user.id, title, content,
+    upvotes: 0, downvotes: 0, replyCount: 0, createdAt: Date.now(),
+  });
+  return c.json({ ok: true, id: postId });
+});
+
+/** GET /api/public/posts/:id — get a single post with replies */
+app.get("/api/public/posts/:id", async (c) => {
+  const postId = c.req.param("id");
+  const post = await db.select().from(posts).where(eq(posts.id, postId)).then((r) => r[0]);
+  if (!post) return c.json({ error: "post not found" }, 404);
+
+  const postReplies = await db.select().from(replies).where(eq(replies.postId, postId)).orderBy(asc(replies.createdAt));
+  return c.json({ ok: true, post, replies: postReplies });
+});
+
+/** POST /api/public/posts/:id/reply — reply to a post */
+app.post("/api/public/posts/:id/reply", async (c) => {
+  const token = extractToken(c);
+  if (!token) return c.json({ error: "auth required" }, 401);
+  const user = await getUserFromToken(token);
+  if (!user) return c.json({ error: "invalid session" }, 401);
+
+  const postId = c.req.param("id");
+  const post = await db.select().from(posts).where(eq(posts.id, postId)).then((r) => r[0]);
+  if (!post) return c.json({ error: "post not found" }, 404);
+
+  const body = await c.req.json<{ content?: string }>();
+  const content = body.content?.trim();
+  if (!content) return c.json({ error: "content required" }, 400);
+
+  const replyId = nanoid();
+  await db.insert(replies).values({
+    id: replyId, postId, userId: user.id, content,
+    upvotes: 0, downvotes: 0, createdAt: Date.now(),
+  });
+  // Increment reply count
+  await db.update(posts).set({ replyCount: post.replyCount + 1 }).where(eq(posts.id, postId));
+  return c.json({ ok: true, id: replyId });
+});
+
+/** POST /api/public/posts/:id/vote — vote on a post or reply
+ *  状态机：
+ *    无记录 → 插入
+ *    同类型 → 删除（toggle off）
+ *    异类型 → 更新
+ */
+app.post("/api/public/posts/:id/vote", async (c) => {
+  const token = extractToken(c);
+  if (!token) return c.json({ error: "auth required" }, 401);
+  const user = await getUserFromToken(token);
+  if (!user) return c.json({ error: "invalid session" }, 401);
+
+  const targetId = c.req.param("id");
+  const body = await c.req.json<{ type?: string }>();
+  const voteType = body.type;
+  if (voteType !== "up" && voteType !== "down") {
+    return c.json({ error: "type must be 'up' or 'down'" }, 400);
+  }
+
+  // Determine target type (post or reply)
+  const post = await db.select().from(posts).where(eq(posts.id, targetId)).then((r) => r[0]);
+  const reply = post ? null : await db.select().from(replies).where(eq(replies.id, targetId)).then((r) => r[0]);
+  if (!post && !reply) return c.json({ error: "target not found" }, 404);
+  const targetType = post ? "post" : "reply";
+
+  // Check existing vote
+  const existing = await db.select().from(votes)
+    .where(and(eq(votes.targetId, targetId), eq(votes.userId, user.id)))
+    .then((r) => r[0]);
+
+  if (existing) {
+    if (existing.type === voteType) {
+      // Same type → toggle off (delete)
+      await db.delete(votes).where(eq(votes.id, existing.id));
+    } else {
+      // Different type → switch
+      await db.update(votes).set({ type: voteType }).where(eq(votes.id, existing.id));
+    }
+  } else {
+    // No existing vote → insert
+    await db.insert(votes).values({
+      id: nanoid(), targetId, targetType, userId: user.id, type: voteType, createdAt: Date.now(),
+    });
+  }
+
+  // Recalculate scores
+  const upCount = await db.select({ c: drizzleCount() }).from(votes)
+    .where(and(eq(votes.targetId, targetId), eq(votes.type, "up"))).then((r) => r[0]?.c || 0);
+  const downCount = await db.select({ c: drizzleCount() }).from(votes)
+    .where(and(eq(votes.targetId, targetId), eq(votes.type, "down"))).then((r) => r[0]?.c || 0);
+
+  // Update counts on target
+  if (post) {
+    await db.update(posts).set({ upvotes: upCount, downvotes: downCount }).where(eq(posts.id, targetId));
+  } else {
+    await db.update(replies).set({ upvotes: upCount, downvotes: downCount }).where(eq(replies.id, targetId));
+  }
+
+  // Check user's current vote
+  const userVote = await db.select().from(votes)
+    .where(and(eq(votes.targetId, targetId), eq(votes.userId, user.id)))
+    .then((r) => r[0]);
+
+  return c.json({
+    ok: true,
+    upvotes: upCount,
+    downvotes: downCount,
+    score: upCount - downCount,
+    myVote: userVote?.type || null,
+  });
+});
+
+/** GET /api/public/posts/:id/votes — get vote status for current user */
+app.get("/api/public/posts/:id/votes", async (c) => {
+  const targetId = c.req.param("id");
+  const upCount = await db.select({ c: drizzleCount() }).from(votes)
+    .where(and(eq(votes.targetId, targetId), eq(votes.type, "up"))).then((r) => r[0]?.c || 0);
+  const downCount = await db.select({ c: drizzleCount() }).from(votes)
+    .where(and(eq(votes.targetId, targetId), eq(votes.type, "down"))).then((r) => r[0]?.c || 0);
+
+  let myVote = null;
+  const token = extractToken(c);
+  if (token) {
+    const user = await getUserFromToken(token);
+    if (user) {
+      myVote = await db.select().from(votes)
+        .where(and(eq(votes.targetId, targetId), eq(votes.userId, user.id)))
+        .then((r) => r[0]?.type || null);
+    }
+  }
+
+  return c.json({ ok: true, upvotes: upCount, downvotes: downCount, score: upCount - downCount, myVote });
+});
+
+/** POST /api/public/seed-groups — seed default groups (dev only) */
+app.post("/api/public/seed-groups", async (c) => {
+  const defaultGroups = [
+    { name: "时间黑洞", type: "time", description: "那些不知不觉吞噬你时间的事", icon: "⏰" },
+    { name: "隐形消费", type: "money", description: "月底才发现的钱都去哪了", icon: "💸" },
+    { name: "工具吐槽", type: "tool", description: "不好用的工具和更好的替代方案", icon: "🔧" },
+    { name: "习惯陷阱", type: "habit", description: "明知道不好但改不掉的日常", icon: "🔄" },
+    { name: "自由讨论", type: "general", description: "任何摩擦都可以聊", icon: "💬" },
+  ];
+
+  const existing = await db.select().from(groups).then((r) => r.length);
+  if (existing > 0) return c.json({ ok: true, message: "groups already seeded", count: existing });
+
+  for (const g of defaultGroups) {
+    await db.insert(groups).values({
+      id: nanoid(), name: g.name, type: g.type, description: g.description,
+      icon: g.icon, memberCount: 0, createdAt: Date.now(),
+    });
+  }
+  return c.json({ ok: true, message: "seeded", count: defaultGroups.length });
+});
 
 export default app;
